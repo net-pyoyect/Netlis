@@ -1727,12 +1727,6 @@ class BrowserWindow(QMainWindow):
         dl_btn.clicked.connect(self._show_downloads)
         nav_bar.addWidget(dl_btn)
 
-        vault_btn = QPushButton("🔑")
-        vault_btn.setObjectName("pluginIconBtn")
-        vault_btn.setToolTip("Bóveda local cifrada de contraseñas (cero nube, cero Google)")
-        vault_btn.clicked.connect(self._show_password_vault)
-        nav_bar.addWidget(vault_btn)
-
         self.turbo_btn = QPushButton(self._mode_button_text())
         self.turbo_btn.setObjectName("ipBtn")
         self.turbo_btn.setToolTip(
@@ -2747,35 +2741,174 @@ class BrowserWindow(QMainWindow):
         self.plugin_mgr.save()
 
     def _show_main_menu(self) -> None:
-        menu = QMenu(self)
-        menu.addAction("Nueva pestaña (Ctrl+T)", lambda: self.add_new_tab(None, "Inicio"))
-        menu.addAction(
-            "Nueva pestaña contenedor aislado",
-            lambda: self.add_new_tab(None, "Contenedor", isolated_container=True),
+        from PyQt6.QtWidgets import QFrame
+
+        if getattr(self, "_main_menu_popup", None) is not None:
+            try:
+                self._main_menu_popup.close()
+            except Exception:
+                pass
+
+        popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        popup.setObjectName("netlisMainMenu")
+        popup.setFixedWidth(316)
+        popup.setStyleSheet(
+            """
+            QFrame#netlisMainMenu {
+                background-color: #2b2a33;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 12px;
+                color: #f0f0f5;
+            }
+            QFrame#menuAccountBanner {
+                background-color: rgba(82, 92, 190, 0.32);
+                border: 1px solid rgba(130, 145, 255, 0.28);
+                border-radius: 10px;
+            }
+            QPushButton#menuRow {
+                background: transparent;
+                color: #eaeaf2;
+                border: none;
+                border-radius: 7px;
+                padding: 6px 10px;
+                text-align: left;
+                font-size: 12.5px;
+            }
+            QPushButton#menuRow:hover { background-color: rgba(255, 255, 255, 0.09); }
+            QPushButton#menuRow:disabled { color: rgba(200, 200, 215, 95); }
+            QPushButton#menuZoomBtn {
+                background: rgba(255, 255, 255, 0.07);
+                color: #f0f0f5;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 6px;
+                min-width: 26px;
+                max-width: 26px;
+                min-height: 24px;
+                max-height: 24px;
+                font-weight: 600;
+            }
+            QPushButton#menuZoomBtn:hover { background-color: rgba(255, 255, 255, 0.16); }
+            """
         )
-        reopen_act = menu.addAction("Reabrir pestaña cerrada (Ctrl+Shift+T)", self._reopen_closed_tab)
-        reopen_act.setEnabled(bool(self._closed_tabs))
-        menu.addAction("Nueva ventana privada (Ctrl+Shift+N)", self.open_incognito_window)
-        menu.addSeparator()
-        menu.addAction("Buscar en la página (Ctrl+F)", self._open_find_bar)
-        menu.addAction("Descargas (Ctrl+J)", self._show_downloads)
-        menu.addAction("Historial y limpieza (Ctrl+H)", self._show_history)
-        menu.addSeparator()
+        root = QVBoxLayout(popup)
+        root.setContentsMargins(8, 8, 8, 8)
+        root.setSpacing(2)
+
+        acct = self._load_google_account_info()
+        acct_email = str(acct.get("email") or "").strip()
+        acct_name = str(acct.get("name") or "").strip()
+        banner = QFrame()
+        banner.setObjectName("menuAccountBanner")
+        b_lay = QHBoxLayout(banner)
+        b_lay.setContentsMargins(10, 8, 10, 8)
+        b_lay.setSpacing(8)
+        av = QLabel()
+        av.setPixmap(_make_account_avatar_icon(active=bool(acct_email)).pixmap(26, 26))
+        b_lay.addWidget(av)
+        b_txt = QVBoxLayout()
+        b_txt.setSpacing(0)
+        b_t1 = QLabel((acct_name or acct_email) if acct_email else "Bóveda Google aislada")
+        b_t1.setStyleSheet("font-weight: 600; font-size: 12px; color: #ffffff; background: transparent;")
+        b_t2 = QLabel(acct_email if acct_email else "Ninguna otra app ve tu correo")
+        b_t2.setStyleSheet("font-size: 11px; color: rgba(225, 230, 255, 195); background: transparent;")
+        b_txt.addWidget(b_t1)
+        b_txt.addWidget(b_t2)
+        b_lay.addLayout(b_txt, 1)
+        b_act = QPushButton("Abrir" if acct_email else "Iniciar sesión")
+        b_act.setStyleSheet(
+            "background: transparent; color: #93c5fd; border: none; font-weight: 600; font-size: 11.5px; text-decoration: underline;"
+        )
+        b_act.clicked.connect(lambda: (popup.close(), self._open_google_vault("https://accounts.google.com")))
+        b_lay.addWidget(b_act)
+        root.addWidget(banner)
+
+        def _add_sep() -> None:
+            s = QFrame()
+            s.setFrameShape(QFrame.Shape.HLine)
+            s.setStyleSheet("background-color: rgba(255, 255, 255, 0.10); max-height: 1px; margin: 4px 6px;")
+            root.addWidget(s)
+
+        def _add_row(label: str, cb, shortcut: str = "", enabled: bool = True) -> None:
+            row_w = QWidget()
+            r_lay = QHBoxLayout(row_w)
+            r_lay.setContentsMargins(0, 0, 6, 0)
+            r_lay.setSpacing(4)
+            btn = QPushButton(label)
+            btn.setObjectName("menuRow")
+            btn.setEnabled(enabled)
+            btn.clicked.connect(lambda: (popup.close(), cb()))
+            r_lay.addWidget(btn, 1)
+            if shortcut:
+                sc = QLabel(shortcut)
+                sc.setStyleSheet("color: rgba(200, 200, 220, 145); font-size: 11px; background: transparent;")
+                r_lay.addWidget(sc)
+            root.addWidget(row_w)
+
+        _add_row("Nueva pestaña", lambda: self.add_new_tab(None, "Inicio"), "Ctrl+T")
+        _add_row("Pestaña contenedor aislado", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
+        _add_row("Reabrir pestaña cerrada", self._reopen_closed_tab, "Ctrl+Shift+T", enabled=bool(self._closed_tabs))
+        _add_row("Nueva ventana privada", self.open_incognito_window, "Ctrl+Shift+N")
+        _add_sep()
+
+        _add_row("Historial y limpieza", self._show_history, "Ctrl+H")
+        _add_row("Descargas", self._show_downloads, "Ctrl+J")
+        _add_row("🔑  Contraseñas (Bóveda local)", self._show_password_vault)
+        _add_row("Extensiones y plugins", self._show_plugin_store)
+        _add_sep()
+
+        _add_row("Buscar en la página", self._open_find_bar, "Ctrl+F")
+
+        # Fila inline de Tamaño / Zoom (estilo Firefox)
+        zoom_row = QWidget()
+        z_lay = QHBoxLayout(zoom_row)
+        z_lay.setContentsMargins(10, 4, 8, 4)
+        z_lay.setSpacing(6)
+        z_lbl = QLabel("Tamaño")
+        z_lbl.setStyleSheet("color: #eaeaf2; font-size: 12.5px; background: transparent;")
+        z_lay.addWidget(z_lbl, 1)
+
         view = self._current_view()
         cur_zoom = int(round((view.zoomFactor() if view else 1.0) * 100))
-        menu.addAction(f"Acercar zoom ({cur_zoom}%)  (Ctrl++)", lambda: self._adjust_zoom(0.1))
-        menu.addAction("Alejar zoom (Ctrl+-)", lambda: self._adjust_zoom(-0.1))
-        menu.addAction("Zoom original 100% (Ctrl+0)", lambda: self._adjust_zoom(None))
-        menu.addAction("Pantalla completa (F11)", self._toggle_window_fullscreen)
-        menu.addSeparator()
-        menu.addAction("Apariencia y transparencia", self._show_appearance)
-        menu.addAction("Extensiones y Plugins", self._show_plugin_store)
-        menu.addAction("Centro de Seguridad e IP", self._show_privacy_center)
+        z_pct = QLabel(f"{cur_zoom}%")
+        z_pct.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        z_pct.setMinimumWidth(42)
+        z_pct.setStyleSheet("color: #e2e8f0; font-size: 12px; font-weight: 600; background: transparent;")
+
+        def _zoom_step(delta: float | None) -> None:
+            self._adjust_zoom(delta)
+            v2 = self._current_view()
+            z_pct.setText(f"{int(round((v2.zoomFactor() if v2 else 1.0) * 100))}%")
+
+        z_minus = QPushButton("−")
+        z_minus.setObjectName("menuZoomBtn")
+        z_minus.clicked.connect(lambda: _zoom_step(-0.1))
+        z_plus = QPushButton("+")
+        z_plus.setObjectName("menuZoomBtn")
+        z_plus.clicked.connect(lambda: _zoom_step(0.1))
+        z_fs = QPushButton("⛶")
+        z_fs.setObjectName("menuZoomBtn")
+        z_fs.setToolTip("Pantalla completa (F11)")
+        z_fs.clicked.connect(lambda: (popup.close(), self._toggle_window_fullscreen()))
+        z_lay.addWidget(z_minus)
+        z_lay.addWidget(z_pct)
+        z_lay.addWidget(z_plus)
+        z_lay.addWidget(z_fs)
+        root.addWidget(zoom_row)
+        _add_sep()
+
+        _add_row("Ajustes y Centro de Seguridad", self._show_privacy_center)
+        _add_row("Apariencia y transparencia", self._show_appearance)
         if is_gecko_available():
-            menu.addSeparator()
-            menu.addAction("Abrir con Motor Firefox C++ (Huella TLS Firefox)", self._open_gecko_session)
+            _add_row("Motor Firefox C++ (Huella TLS)", self._open_gecko_session)
+        _add_sep()
+        _add_row("Salir", self.close, "Ctrl+Q")
+
+        popup.adjustSize()
         pos = self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomRight())
-        menu.exec(QPoint(pos.x() - menu.sizeHint().width(), pos.y() + 4))
+        popup.move(pos.x() - popup.width(), pos.y() + 6)
+        self._main_menu_popup = popup
+        popup.show()
 
     def _open_gecko_session(self) -> None:
         launch_gecko_session(
