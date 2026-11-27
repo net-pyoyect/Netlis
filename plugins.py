@@ -264,6 +264,13 @@ BUILTIN_PLUGINS: tuple[PluginDefinition, ...] = (
                     });
                 } catch (e) {}
                 try { navigator.getGamepads = () => []; } catch (e) {}
+                try { navigator.getBattery = undefined; } catch (e) {}
+                if (navigator.clipboard) {
+                    try {
+                        navigator.clipboard.readText = async () => '';
+                        navigator.clipboard.read = async () => [];
+                    } catch (e) {}
+                }
                 if (window.speechSynthesis) {
                     try { window.speechSynthesis.getVoices = () => []; } catch (e) {}
                 }
