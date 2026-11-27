@@ -1,0 +1,18 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Netlis
+GenericName=Navegador Web Privado
+Comment=Navegador privado ultraligero con Tor integrado, anti-rastreo y motor híbrido
+Exec=/home/net/Proyectos/navegador/launch.sh %U
+Icon=/home/net/Proyectos/navegador/assets/netlis_logo_transparent.png
+Terminal=false
+Categories=Network;WebBrowser;Security;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+StartupWMClass=browser.py
+Actions=new-private-window;
+
+[Desktop Action new-private-window]
+Name=Nueva ventana privada
+Exec=/home/net/Proyectos/navegador/launch.sh --incognito

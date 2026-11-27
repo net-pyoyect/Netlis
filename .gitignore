@@ -1,0 +1,20 @@
+# Entorno virtual y binarios locales
+.venv/
+.tor/
+__pycache__/
+*.py[cod]
+*.bak
+*.tmp
+
+# Datos de usuario y estado en tiempo de ejecución
+data/privacidad.json
+data/apariencia.json
+data/marcadores.json
+data/historial.json
+data/plugins.json
+data/update_status.json
+data/threat_domains.txt*
+data/tor_consensus/
+data/profile/
+data/custom_plugins/
+data/web_extensions/
