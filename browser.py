@@ -48,7 +48,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from dialogs import AppearanceDialog, BraveShieldsPopup, DownloadsDialog, HistoryDialog, PluginStoreDialog, PrivacyCenterDialog
+from dialogs import (
+    AppearanceDialog,
+    BraveShieldsPopup,
+    DownloadsDialog,
+    HistoryDialog,
+    IOS_GLASS_QSS,
+    PluginStoreDialog,
+    PrivacyCenterDialog,
+    RoundedDialog,
+)
 from gecko_engine import is_gecko_available, launch_gecko_session
 from netlis_search import render_search_loading_html, render_search_results_html, run_netlis_metasearch
 from newtab import AppearanceSettings, SEARCH_ENGINES, _image_data_uri, render_new_tab_html
@@ -1088,28 +1097,34 @@ class BrowserWindow(QMainWindow):
         acct_email = str(acct.get("email") or "").strip()
         acct_name = str(acct.get("name") or "").strip()
         vault_active = bool(acct_email) or (self.data_dir / "google_vault" / "storage").exists()
-        popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup = QWidget(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        popup.setFixedWidth(332)
-        popup.setStyleSheet(
+        popup.setFixedWidth(348)
+        outer_lay = QVBoxLayout(popup)
+        outer_lay.setContentsMargins(0, 0, 0, 0)
+        card = QFrame()
+        card.setObjectName("googleVaultCard")
+        card.setStyleSheet(
             """
             QFrame#googleVaultCard {
-                background-color: #2b2a33;
-                border: 1px solid rgba(255, 255, 255, 0.14);
-                border-radius: 12px;
+                background-color: rgba(34, 33, 44, 246);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 14px;
                 color: #f0f0f5;
+                font-family: "Inter", "Segoe UI", "Ubuntu", sans-serif;
             }
             QFrame#googleBanner {
-                background-color: rgba(66, 133, 244, 0.20);
-                border: 1px solid rgba(100, 160, 255, 0.28);
-                border-radius: 10px;
+                background-color: rgba(66, 133, 244, 0.22);
+                border: 1px solid rgba(110, 170, 255, 0.30);
+                border-radius: 12px;
             }
             QPushButton#googlePrimaryBtn {
                 background-color: #3b82f6;
                 color: #ffffff;
                 border: none;
                 border-radius: 14px;
-                padding: 6px 14px;
+                padding: 7px 14px;
                 font-weight: 600;
                 font-size: 12px;
             }
@@ -1118,7 +1133,7 @@ class BrowserWindow(QMainWindow):
                 background: transparent;
                 color: #eaeaf2;
                 border: none;
-                border-radius: 7px;
+                border-radius: 8px;
                 padding: 7px 10px;
                 text-align: left;
                 font-size: 12.5px;
@@ -1128,7 +1143,7 @@ class BrowserWindow(QMainWindow):
                 background: transparent;
                 color: #fca5a5;
                 border: none;
-                border-radius: 7px;
+                border-radius: 8px;
                 padding: 7px 10px;
                 text-align: left;
                 font-size: 12.5px;
@@ -1136,12 +1151,12 @@ class BrowserWindow(QMainWindow):
             QPushButton#googleDangerBtn:hover { background-color: rgba(239, 68, 68, 0.16); }
             """
         )
-        popup.setObjectName("googleVaultCard")
-        root = QVBoxLayout(popup)
+        outer_lay.addWidget(card)
+        root = QVBoxLayout(card)
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(6)
 
-        # Tarjeta superior estilo Firefox
+        # Tarjeta superior estilo Firefox con logo Netlis cuando no hay sesión
         banner = QFrame()
         banner.setObjectName("googleBanner")
         b_lay = QHBoxLayout(banner)
@@ -1149,17 +1164,25 @@ class BrowserWindow(QMainWindow):
         b_lay.setSpacing(10)
 
         av_lbl = QLabel()
-        av_lbl.setPixmap(_make_account_avatar_icon(active=True).pixmap(28, 28))
+        if not acct_email and not self._netlis_icon.isNull():
+            av_lbl.setPixmap(self._netlis_icon.pixmap(30, 30))
+        else:
+            av_lbl.setPixmap(_make_account_avatar_icon(active=True).pixmap(28, 28))
         b_lay.addWidget(av_lbl)
 
         txt_col = QVBoxLayout()
-        txt_col.setSpacing(1)
-        title_str = (acct_name or "Cuenta Google") if acct_email else ("Cuenta Google aislada" if vault_active else "Inicia sesión en Google")
-        sub_str = f"{acct_email} • aislada" if acct_email else "Ninguna otra app ve tu correo"
+        txt_col.setSpacing(2)
+        title_str = (acct_name or "Cuenta Google") if acct_email else "Inicia sesión en Google"
+        sub_str = (
+            f"{acct_email} • aislada"
+            if acct_email
+            else "Descuida: ninguna página podrá ver tu correo a menos que lo proporciones."
+        )
         t_title = QLabel(title_str)
         t_title.setStyleSheet("font-weight: 600; font-size: 12.5px; color: #ffffff; background: transparent;")
         t_sub = QLabel(sub_str)
-        t_sub.setStyleSheet("font-size: 11px; color: rgba(230, 236, 255, 195); background: transparent;")
+        t_sub.setWordWrap(True)
+        t_sub.setStyleSheet("font-size: 11px; color: rgba(230, 236, 255, 205); background: transparent;")
         txt_col.addWidget(t_title)
         txt_col.addWidget(t_sub)
         b_lay.addLayout(txt_col, 1)
@@ -1255,21 +1278,29 @@ class BrowserWindow(QMainWindow):
         cur_view = self._current_view()
         cur_host = normalize_domain(cur_view.url().host()) if cur_view is not None else ""
 
-        dlg = QDialog(self)
+        dlg = RoundedDialog(self)
         dlg.setWindowTitle("Bóveda Local Cifrada — Netlis (Cero Nube)")
-        dlg.resize(540, 440)
-        dlg.setStyleSheet(
-            "QDialog { background: #1e1d26; color: #f0f0f5; } "
-            "QLineEdit, QListWidget { background: #14131a; color: #f0f0f5; border: 1px solid #353445; border-radius: 6px; padding: 6px; } "
-            "QPushButton { background: #2c2b38; color: #f0f0f5; border: 1px solid #3f3e52; border-radius: 6px; padding: 6px 10px; } "
-            "QPushButton:hover { background: #3b82f6; }"
-        )
+        dlg.resize(590, 480)
+        dlg.setStyleSheet(IOS_GLASS_QSS)
         lay = QVBoxLayout(dlg)
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.setSpacing(10)
+
+        hdr_row = QHBoxLayout()
+        hdr_lbl = QLabel("🔑  Bóveda Local Cifrada (Cero Nube)")
+        hdr_lbl.setObjectName("dlgTitle")
+        close_x = QPushButton("✕")
+        close_x.setObjectName("closePill")
+        close_x.setFixedSize(28, 28)
+        close_x.clicked.connect(dlg.accept)
+        hdr_row.addWidget(hdr_lbl, 1)
+        hdr_row.addWidget(close_x)
+        lay.addLayout(hdr_row)
 
         info_lbl = QLabel(
             f"Sitio actual: {cur_host or '(ninguno)'}   •   Cifrado local scrypt + HMAC-SHA256"
         )
-        info_lbl.setStyleSheet("color: #93c5fd; font-size: 12px;")
+        info_lbl.setStyleSheet("color: #93c5fd; font-size: 12px; background: transparent;")
         lay.addWidget(info_lbl)
 
         list_w = QListWidget()
@@ -2749,28 +2780,33 @@ class BrowserWindow(QMainWindow):
             except Exception:
                 pass
 
-        popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup = QWidget(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        popup.setObjectName("netlisMainMenu")
-        popup.setFixedWidth(316)
-        popup.setStyleSheet(
+        popup.setFixedWidth(332)
+        outer_lay = QVBoxLayout(popup)
+        outer_lay.setContentsMargins(0, 0, 0, 0)
+        card = QFrame()
+        card.setObjectName("netlisMainMenu")
+        card.setStyleSheet(
             """
             QFrame#netlisMainMenu {
-                background-color: #2b2a33;
-                border: 1px solid rgba(255, 255, 255, 0.14);
-                border-radius: 12px;
+                background-color: rgba(34, 33, 44, 246);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 14px;
                 color: #f0f0f5;
+                font-family: "Inter", "Segoe UI", "Ubuntu", sans-serif;
             }
             QFrame#menuAccountBanner {
                 background-color: rgba(82, 92, 190, 0.32);
-                border: 1px solid rgba(130, 145, 255, 0.28);
-                border-radius: 10px;
+                border: 1px solid rgba(130, 145, 255, 0.30);
+                border-radius: 12px;
             }
             QPushButton#menuRow {
                 background: transparent;
                 color: #eaeaf2;
                 border: none;
-                border-radius: 7px;
+                border-radius: 8px;
                 padding: 6px 10px;
                 text-align: left;
                 font-size: 12.5px;
@@ -2778,21 +2814,23 @@ class BrowserWindow(QMainWindow):
             QPushButton#menuRow:hover { background-color: rgba(255, 255, 255, 0.09); }
             QPushButton#menuRow:disabled { color: rgba(200, 200, 215, 95); }
             QPushButton#menuZoomBtn {
-                background: rgba(255, 255, 255, 0.07);
+                background: rgba(255, 255, 255, 0.08);
                 color: #f0f0f5;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 8px;
                 min-width: 26px;
                 max-width: 26px;
                 min-height: 24px;
                 max-height: 24px;
                 font-weight: 600;
+                font-size: 12.5px;
             }
-            QPushButton#menuZoomBtn:hover { background-color: rgba(255, 255, 255, 0.16); }
+            QPushButton#menuZoomBtn:hover { background-color: rgba(255, 255, 255, 0.18); }
             """
         )
-        root = QVBoxLayout(popup)
-        root.setContentsMargins(8, 8, 8, 8)
+        outer_lay.addWidget(card)
+        root = QVBoxLayout(card)
+        root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(2)
 
         acct = self._load_google_account_info()
@@ -2801,17 +2839,23 @@ class BrowserWindow(QMainWindow):
         banner = QFrame()
         banner.setObjectName("menuAccountBanner")
         b_lay = QHBoxLayout(banner)
-        b_lay.setContentsMargins(10, 8, 10, 8)
-        b_lay.setSpacing(8)
+        b_lay.setContentsMargins(10, 9, 10, 9)
+        b_lay.setSpacing(9)
         av = QLabel()
-        av.setPixmap(_make_account_avatar_icon(active=bool(acct_email)).pixmap(26, 26))
+        if not acct_email and not self._netlis_icon.isNull():
+            av.setPixmap(self._netlis_icon.pixmap(28, 28))
+        else:
+            av.setPixmap(_make_account_avatar_icon(active=bool(acct_email)).pixmap(26, 26))
         b_lay.addWidget(av)
         b_txt = QVBoxLayout()
-        b_txt.setSpacing(0)
-        b_t1 = QLabel((acct_name or acct_email) if acct_email else "Bóveda Google aislada")
-        b_t1.setStyleSheet("font-weight: 600; font-size: 12px; color: #ffffff; background: transparent;")
-        b_t2 = QLabel(acct_email if acct_email else "Ninguna otra app ve tu correo")
-        b_t2.setStyleSheet("font-size: 11px; color: rgba(225, 230, 255, 195); background: transparent;")
+        b_txt.setSpacing(1)
+        b_t1 = QLabel((acct_name or acct_email) if acct_email else "Inicia sesión en Google")
+        b_t1.setStyleSheet("font-weight: 600; font-size: 12.5px; color: #ffffff; background: transparent;")
+        b_t2 = QLabel(
+            acct_email if acct_email else "Descuida: ninguna página verá tu correo sin permiso."
+        )
+        b_t2.setWordWrap(True)
+        b_t2.setStyleSheet("font-size: 11px; color: rgba(225, 230, 255, 205); background: transparent;")
         b_txt.addWidget(b_t1)
         b_txt.addWidget(b_t2)
         b_lay.addLayout(b_txt, 1)
