@@ -1171,7 +1171,7 @@ class BrowserWindow(QMainWindow):
 
         self.turbo_btn = QPushButton(self._mode_button_text())
         self.turbo_btn.setObjectName("ipBtn")
-        self.turbo_btn.setToolTip("Cambiar en 1 clic entre Modo Tor (IP oculta) y Modo Turbo (Velocidad máxima)")
+        self.turbo_btn.setToolTip("Cambiar en 1 clic entre Modo Tor (IP oculta) y Sin Tor (conexión directa rápida)")
         self.turbo_btn.clicked.connect(self._toggle_turbo_mode)
         nav_bar.addWidget(self.turbo_btn)
 
@@ -1300,7 +1300,7 @@ class BrowserWindow(QMainWindow):
         return edges
 
     def _mode_button_text(self) -> str:
-        return "Tor" if self.settings.proxy_enabled else "Turbo"
+        return "Tor" if self.settings.proxy_enabled else "Sin Tor ⚡"
 
     def _ip_button_text(self) -> str:
         if self.settings.proxy_enabled:
@@ -1352,6 +1352,8 @@ class BrowserWindow(QMainWindow):
             if TOR_ENGINE is None:
                 TOR_ENGINE = EmbeddedTorManager(self.data_dir)
             TOR_ENGINE.start_async(self.settings.ip_region, self.settings.tor_bridges_obfs4)
+        elif TOR_ENGINE is not None:
+            TOR_ENGINE.stop(wipe_files=False)
         apply_qt_network_proxy(self.settings)
         self._refresh_network_pill()
 
@@ -2368,11 +2370,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Netlis Browser")
     parser.add_argument("--smoke", action="store_true", help="Verifica que Netlis inicie y sale")
     parser.add_argument("--incognito", action="store_true", help="Abre directamente en modo incógnito")
+    parser.add_argument("--no-tor", "--sin-tor", dest="no_tor", action="store_true", help="Inicia sin Tor (conexión directa rápida)")
     parser.add_argument("urls", nargs="*", help="URLs opcionales a abrir al iniciar")
     args, qt_args = parser.parse_known_args()
 
     data_dir = Path(__file__).resolve().parent / "data"
     settings = PrivacySettings.load(data_dir / "privacidad.json")
+    if args.no_tor:
+        settings.proxy_enabled = False
     appearance = AppearanceSettings.load(data_dir / "apariencia.json")
 
     if not args.smoke:

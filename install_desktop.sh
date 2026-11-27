@@ -18,11 +18,15 @@ Categories=Network;WebBrowser;Security;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
 StartupNotify=true
 StartupWMClass=browser.py
-Actions=new-private-window;
+Actions=new-private-window;no-tor;
 
 [Desktop Action new-private-window]
 Name=Nueva ventana privada
 Exec=$DIR/launch.sh --incognito
+
+[Desktop Action no-tor]
+Name=Abrir rápido (Sin Tor)
+Exec=$DIR/launch.sh --no-tor
 EOF
 
 echo "Acceso directo instalado en $APP_DIR/netlis.desktop"
