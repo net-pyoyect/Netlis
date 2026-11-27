@@ -28,7 +28,7 @@ Name=Nueva ventana privada
 Exec=$DIR/launch.sh --incognito
 
 [Desktop Action no-tor]
-Name=Abrir rápido (Sin Tor)
+Name=Modo Día a día (Rápido, sin Tor)
 Exec=$DIR/launch.sh --no-tor
 EOF
 

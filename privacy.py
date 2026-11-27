@@ -366,6 +366,8 @@ def build_chromium_flags(settings: PrivacySettings) -> list[str]:
     ]
     flags: list[str] = [
         f"--js-flags={','.join(js_opts)}",
+        "--disable-background-networking",
+        "--disable-sync",
     ]
 
     if settings.strict_site_isolation:
@@ -531,8 +533,9 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
             return
 
         if self.settings.strip_tracking_params and url.hasQuery():
-            cleaned = strip_tracking_from_url(url.toString())
-            if cleaned != url.toString():
+            raw_u = url.toString()
+            cleaned = strip_tracking_from_url(raw_u)
+            if cleaned != raw_u:
                 info.redirect(QUrl(cleaned))
                 return
 

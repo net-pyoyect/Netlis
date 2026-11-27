@@ -911,7 +911,7 @@ class BrowserWindow(QMainWindow):
         self.interceptor = TrackerInterceptor(
             self.settings,
             on_blocked=self._schedule_shield_refresh,
-            anti_spy_enabled=lambda: self.plugin_mgr.is_enabled("anti-espionaje-total"),
+            anti_spy_enabled=lambda: self.settings.proxy_enabled and self.plugin_mgr.is_enabled("anti-espionaje-total"),
         )
         self._tab_profiles: dict[QWebEngineView, QWebEngineProfile] = {}
         self._google_vault_profile: QWebEngineProfile | None = None
@@ -1564,7 +1564,9 @@ class BrowserWindow(QMainWindow):
 
         self.turbo_btn = QPushButton(self._mode_button_text())
         self.turbo_btn.setObjectName("ipBtn")
-        self.turbo_btn.setToolTip("Cambiar en 1 clic entre Modo Tor (IP oculta) y Sin Tor (conexión directa rápida)")
+        self.turbo_btn.setToolTip(
+            "Cambiar en 1 clic: Día a día ⚡ (rápido, tu IP + bloqueador) ⇄ Tor 🔒 (investigación anónima)"
+        )
         self.turbo_btn.clicked.connect(self._toggle_turbo_mode)
         nav_bar.addWidget(self.turbo_btn)
 
@@ -1705,13 +1707,13 @@ class BrowserWindow(QMainWindow):
         return edges
 
     def _mode_button_text(self) -> str:
-        return "Tor" if self.settings.proxy_enabled else "Sin Tor ⚡"
+        return "Tor 🔒" if self.settings.proxy_enabled else "Día a día ⚡"
 
     def _ip_button_text(self) -> str:
         if self.settings.proxy_enabled:
             region = IP_REGIONS.get(self.settings.ip_region, "Auto").split(" ")[0]
             return f"● {region}" if is_proxy_reachable(self.settings.proxy_url) else "◐ Tor…"
-        return "Directa"
+        return "IP Directa"
 
     def _rebuild_bookmarks_bar(self) -> None:
         while self.bm_layout.count():
@@ -1759,6 +1761,8 @@ class BrowserWindow(QMainWindow):
             TOR_ENGINE.start_async(self.settings.ip_region, self.settings.tor_bridges_obfs4)
         elif TOR_ENGINE is not None:
             TOR_ENGINE.stop(wipe_files=False)
+        for prof in self._all_profiles():
+            prof.settings().setAttribute(QWebEngineSettings.WebAttribute.DnsPrefetchEnabled, not self.settings.proxy_enabled)
         apply_qt_network_proxy(self.settings)
         self._refresh_network_pill()
 
