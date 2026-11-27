@@ -216,12 +216,15 @@ BUILTIN_PLUGINS: tuple[PluginDefinition, ...] = (
                     return res;
                 };
 
-                // 2. Eliminar por completo WebRTC y enumeración de cámaras/micrófonos
-                for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'mozRTCPeerConnection', 'RTCDataChannel']) {
-                    try { delete window[k]; Object.defineProperty(window, k, { get: () => undefined }); } catch (e) {}
-                }
-                if (navigator.mediaDevices) {
-                    Object.defineProperty(navigator, 'mediaDevices', { get: () => undefined });
+                // 2. Eliminar WebRTC y enumeración de cámaras/micrófonos (permitido solo en apps de videollamada bajo permiso)
+                const _isCallHost = /(^|\\.)(zoom\\.us|meet\\.google\\.com|teams\\.microsoft\\.com|discord\\.com|jit\\.si)$/i.test(location.hostname);
+                if (!_isCallHost) {
+                    for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'mozRTCPeerConnection', 'RTCDataChannel']) {
+                        try { delete window[k]; Object.defineProperty(window, k, { get: () => undefined }); } catch (e) {}
+                    }
+                    if (navigator.mediaDevices) {
+                        Object.defineProperty(navigator, 'mediaDevices', { get: () => undefined });
+                    }
                 }
 
                 // 3. Bloquear Geolocalización GPS/Wi-Fi en JS

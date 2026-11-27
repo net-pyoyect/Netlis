@@ -676,15 +676,61 @@ p {{ margin: 0; color: rgba(235, 235, 248, 0.78); font-size: 13px; word-break: b
 </body></html>"""
 
 
+def _is_google_vault_host(host: str) -> bool:
+    """Devuelve True solo para dominios oficiales de Google/YouTube (cerco estricto de la Bóveda Google)."""
+    h = (host or "").lower().strip(".")
+    if not h:
+        return False
+    allowed = (
+        "google.com",
+        "youtube.com",
+        "googleusercontent.com",
+        "gstatic.com",
+        "googleapis.com",
+        "googlevideo.com",
+        "ytimg.com",
+        "ggpht.com",
+    )
+    return any(h == d or h.endswith("." + d) for d in allowed)
+
+
 class SecureWebPage(QWebEnginePage):
     """Página endurecida: deniega permisos espía, abre pestañas del usuario y bloquea popups/phishing."""
 
     def __init__(self, profile: QWebEngineProfile, parent=None, browser_win: "BrowserWindow | None" = None) -> None:
         super().__init__(profile, parent)
         self.browser_win = browser_win
-        self.featurePermissionRequested.connect(self._deny_invasive_permission)
+        self.featurePermissionRequested.connect(self._handle_feature_permission)
 
-    def _deny_invasive_permission(self, security_origin: QUrl, feature: QWebEnginePage.Feature) -> None:
+    def _handle_feature_permission(self, security_origin: QUrl, feature: QWebEnginePage.Feature) -> None:
+        media_labels = {
+            QWebEnginePage.Feature.MediaAudioCapture: "el micrófono",
+            QWebEnginePage.Feature.MediaVideoCapture: "la cámara",
+            QWebEnginePage.Feature.MediaAudioVideoCapture: "la cámara y el micrófono",
+            QWebEnginePage.Feature.DesktopVideoCapture: "compartir pantalla",
+            QWebEnginePage.Feature.DesktopAudioVideoCapture: "compartir pantalla y audio",
+        }
+        if feature in media_labels and self.browser_win is not None:
+            host = security_origin.host() or security_origin.toString()
+            key = (host, int(feature.value))
+            cached = self.browser_win._session_media_permissions.get(key)
+            if cached is None:
+                ans = QMessageBox.question(
+                    self.browser_win,
+                    "Permiso de videollamada — Netlis",
+                    f"¿Permitir que {host} use {media_labels[feature]} durante esta sesión?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                cached = ans == QMessageBox.StandardButton.Yes
+                self.browser_win._session_media_permissions[key] = cached
+            policy = (
+                QWebEnginePage.PermissionPolicy.PermissionGrantedByUser
+                if cached
+                else QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
+            )
+            self.setFeaturePermission(security_origin, feature, policy)
+            return
         self.setFeaturePermission(
             security_origin,
             feature,
@@ -695,10 +741,25 @@ class SecureWebPage(QWebEnginePage):
         """Permite clics medios / enlaces en pestaña nueva del usuario mientras bloquea ventanas emergentes."""
         if self.browser_win is None:
             return None
-        if win_type == QWebEnginePage.WebWindowType.WebDialog:
+        cur_host = self.url().host().lower()
+        allow_dialog = (
+            cur_host == "zoom.us"
+            or cur_host.endswith(".zoom.us")
+            or cur_host == "accounts.google.com"
+        )
+        if win_type == QWebEnginePage.WebWindowType.WebDialog and not allow_dialog:
             return None
         switch_to = win_type != QWebEnginePage.WebWindowType.WebBrowserBackgroundTab
-        new_view = self.browser_win.add_new_tab(QUrl("about:blank"), "Cargando…", switch_to=switch_to)
+        in_google_vault = (
+            self.browser_win._google_vault_profile is not None
+            and self.profile() is self.browser_win._google_vault_profile
+        )
+        new_view = self.browser_win.add_new_tab(
+            QUrl("about:blank"),
+            "[G] Cargando…" if in_google_vault else "Cargando…",
+            switch_to=switch_to,
+            google_vault=in_google_vault,
+        )
         return new_view.page()
 
     def acceptNavigationRequest(self, url: QUrl, nav_type: QWebEnginePage.NavigationType, is_main_frame: bool) -> bool:
@@ -725,6 +786,21 @@ class SecureWebPage(QWebEnginePage):
 
         scheme = url.scheme().lower()
         if scheme in ("javascript", "vbscript", "file"):
+            return False
+
+        # Cerco estricto de Bóveda Google: cualquier enlace externo sale a una pestaña normal limpia (sin cookies de Google)
+        if (
+            is_main_frame
+            and self.browser_win is not None
+            and self.browser_win._google_vault_profile is not None
+            and self.profile() is self.browser_win._google_vault_profile
+            and scheme in ("http", "https")
+            and not _is_google_vault_host(url.host())
+        ):
+            QTimer.singleShot(
+                0,
+                lambda u=QUrl(url): self.browser_win.add_new_tab(u, u.host() or "Externo", switch_to=True),
+            )
             return False
 
         if (
@@ -795,6 +871,8 @@ class BrowserWindow(QMainWindow):
             anti_spy_enabled=lambda: self.plugin_mgr.is_enabled("anti-espionaje-total"),
         )
         self._tab_profiles: dict[QWebEngineView, QWebEngineProfile] = {}
+        self._google_vault_profile: QWebEngineProfile | None = None
+        self._session_media_permissions: dict[tuple[str, int], bool] = {}
         self.blocked_downloads = 0
         self.downloads_records: list[dict] = []
         self._closed_tabs: list[tuple[str, str]] = []
@@ -849,7 +927,70 @@ class BrowserWindow(QMainWindow):
         seen = {id(self.profile): self.profile}
         for p in self._tab_profiles.values():
             seen[id(p)] = p
+        if self._google_vault_profile is not None:
+            seen[id(self._google_vault_profile)] = self._google_vault_profile
         return list(seen.values())
+
+    def _get_google_vault_profile(self) -> QWebEngineProfile:
+        if self._google_vault_profile is not None:
+            return self._google_vault_profile
+        vault_dir = self.data_dir / "google_vault"
+        storage_dir = vault_dir / "storage"
+        cache_dir = vault_dir / "cache"
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        prof = QWebEngineProfile("Netlis_Google_Vault", self)
+        prof.setPersistentStoragePath(str(storage_dir))
+        prof.setCachePath(str(cache_dir))
+        prof.setHttpCacheType(QWebEngineProfile.HttpCacheType.DiskHttpCache)
+        prof.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies)
+        self._google_vault_profile = prof
+        self._configure_web_profile(prof)
+        return prof
+
+    def _open_google_vault(self, target_url: str = "https://accounts.google.com") -> None:
+        vault_prof = self._get_google_vault_profile()
+        for i in range(self.stack.count()):
+            v = self.stack.widget(i)
+            if isinstance(v, QWebEngineView) and v.page().profile() is vault_prof:
+                self.tab_bar.setCurrentIndex(i)
+                return
+        self.add_new_tab(QUrl(target_url), "[G] Cuenta Google", switch_to=True, google_vault=True)
+
+    def _wipe_google_vault(self) -> None:
+        from PyQt6 import sip
+
+        if self._google_vault_profile is not None:
+            for i in range(self.stack.count() - 1, -1, -1):
+                v = self.stack.widget(i)
+                if isinstance(v, QWebEngineView) and v.page().profile() is self._google_vault_profile:
+                    if self.stack.count() == 1:
+                        self.add_new_tab(None, "Inicio", switch_to=False)
+                    self.close_tab(i)
+            try:
+                self._google_vault_profile.cookieStore().deleteAllCookies()
+                self._google_vault_profile.clearHttpCache()
+            except Exception:
+                pass
+            if not sip.isdeleted(self._google_vault_profile):
+                sip.delete(self._google_vault_profile)
+            self._google_vault_profile = None
+        shutil.rmtree(self.data_dir / "google_vault", ignore_errors=True)
+        QMessageBox.information(
+            self,
+            "Bóveda Google borrada",
+            "Se cerró tu sesión de Google y se eliminaron todas sus cookies y datos locales.",
+        )
+
+    def _show_google_vault_menu(self) -> None:
+        menu = QMenu(self)
+        menu.addAction("Abrir Cuenta de Google (aislada)", lambda: self._open_google_vault("https://accounts.google.com"))
+        menu.addAction("Abrir Gmail (aislado)", lambda: self._open_google_vault("https://mail.google.com"))
+        menu.addAction("Abrir Google Drive (aislado)", lambda: self._open_google_vault("https://drive.google.com"))
+        menu.addAction("Abrir YouTube (en Bóveda Google)", lambda: self._open_google_vault("https://www.youtube.com"))
+        menu.addSeparator()
+        menu.addAction("Cerrar sesión y borrar Bóveda Google", self._wipe_google_vault)
+        menu.exec(self.google_btn.mapToGlobal(self.google_btn.rect().bottomLeft()))
 
     def _configure_web_profile(self, prof: QWebEngineProfile) -> None:
         prof.setUrlRequestInterceptor(self.interceptor)
@@ -902,9 +1043,18 @@ class BrowserWindow(QMainWindow):
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
 
-        # Bloqueo real de cookies de terceros en el motor
+        # Bloqueo real de cookies de terceros en el motor (+ cerco estricto en Bóveda Google)
         block_3p = self.settings.block_third_party_cookies
-        prof.cookieStore().setCookieFilter(lambda req: not (block_3p and req.thirdParty))
+        if prof is self._google_vault_profile:
+            prof.cookieStore().setCookieFilter(
+                lambda req: (
+                    not req.thirdParty
+                    and _is_google_vault_host(req.firstPartyUrl.host())
+                    and _is_google_vault_host(req.origin.host())
+                )
+            )
+        else:
+            prof.cookieStore().setCookieFilter(lambda req: not (block_3p and req.thirdParty))
 
         # Limpiar y registrar protección JS temprana (DocumentCreation) contra fingerprinting
         scripts = prof.scripts()
@@ -1174,6 +1324,14 @@ class BrowserWindow(QMainWindow):
         self.turbo_btn.setToolTip("Cambiar en 1 clic entre Modo Tor (IP oculta) y Sin Tor (conexión directa rápida)")
         self.turbo_btn.clicked.connect(self._toggle_turbo_mode)
         nav_bar.addWidget(self.turbo_btn)
+
+        self.google_btn = QPushButton("G Cuenta")
+        self.google_btn.setObjectName("ipBtn")
+        self.google_btn.setToolTip(
+            "Sesión aislada de Google: ninguna otra web o app puede ver tu correo ni tus cookies"
+        )
+        self.google_btn.clicked.connect(self._show_google_vault_menu)
+        nav_bar.addWidget(self.google_btn)
 
         self.ip_btn = QPushButton(self._ip_button_text())
         self.ip_btn.setObjectName("ipBtn")
@@ -1636,6 +1794,7 @@ class BrowserWindow(QMainWindow):
         label: str = "Inicio",
         switch_to: bool = True,
         isolated_container: bool | None = None,
+        google_vault: bool = False,
     ) -> QWebEngineView:
         view = QWebEngineView()
         use_container = (
@@ -1643,7 +1802,9 @@ class BrowserWindow(QMainWindow):
             if isolated_container is None
             else isolated_container
         )
-        if use_container and self.stack.count() >= 1:
+        if google_vault:
+            active_profile = self._get_google_vault_profile()
+        elif use_container and self.stack.count() >= 1:
             tab_prof = QWebEngineProfile(self)
             tab_prof.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
             tab_prof.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.NoPersistentCookies)
