@@ -9,9 +9,9 @@ echo "=== Instalador Universal de Netlis Browser para Linux ==="
 install_sys_deps() {
     if command -v apt-get >/dev/null 2>&1; then
         echo "[*] Detectado sistema basado en Debian/Ubuntu (Debian, Ubuntu, Kali, Linux Mint, Pop!_OS)..."
-        sudo apt-get update
-        sudo apt-get install -y python3 python3-venv python3-pip git tor obfs4proxy libxcb-cursor0 libnss3 libegl1 libxkbcommon0 || \
-        sudo apt-get install -y python3 python3-venv python3-pip git tor libxcb-cursor0 libnss3 libegl1 libxkbcommon0
+        sudo apt-get update || true
+        sudo apt-get install -y python3 python3-venv python3-pip git tor obfs4proxy libxcb-cursor0 libnss3 libegl1 libxkbcommon0 fonts-liberation fonts-dejavu-core || \
+        sudo apt-get install -y python3 python3-venv python3-pip git tor libxcb-cursor0 libnss3 libegl1 libxkbcommon0 fonts-liberation fonts-dejavu-core
     elif command -v pacman >/dev/null 2>&1; then
         echo "[*] Detectado sistema basado en Arch Linux (Arch, Manjaro, EndeavourOS, Quantum)..."
         sudo pacman -Sy --needed --noconfirm python git tor nss libxcb xcb-util-cursor libxkbcommon

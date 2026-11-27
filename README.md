@@ -24,7 +24,7 @@ git clone https://github.com/net-pyoyect/Netlis.git netlis && cd netlis && chmod
 
 **Debian / Ubuntu / Linux Mint / Pop!_OS / Kali Linux:**
 ```bash
-sudo apt update && sudo apt install -y python3 python3-venv python3-pip git tor obfs4proxy libxcb-cursor0 libnss3 libegl1
+sudo apt update; sudo apt install -y python3 python3-venv python3-pip git tor obfs4proxy libxcb-cursor0 libnss3 libegl1
 git clone https://github.com/net-pyoyect/Netlis.git netlis && cd netlis
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 chmod +x launch.sh install_desktop.sh && ./install_desktop.sh && ./launch.sh
