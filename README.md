@@ -1,4 +1,8 @@
-# Netlis Browser
+<p align="center">
+  <img src="assets/netlis_logo_transparent.png" alt="Netlis Logo" width="128" />
+</p>
+
+<h1 align="center">Netlis Browser</h1>
 
 Navegador web privado, ligero y personalizable para Linux y Windows, con **Tor integrado**, **puentes obfs4**, **bloqueo de rastreadores/anuncios por sitio**, **protección local anti-phishing y magic-bytes en descargas**, **extensiones WebExtension MV3 + Userscripts**, y **modo híbrido opcional con Firefox/Gecko C++**.
 
@@ -19,6 +23,9 @@ Detecta automáticamente **Debian, Ubuntu, Kali, Linux Mint, Pop!_OS, Arch, Manj
 ```bash
 git clone https://github.com/net-pyoyect/Netlis.git netlis && cd netlis && chmod +x install.sh && ./install.sh
 ```
+
+- **Actualizar en 1 comando (Linux):** `./update.sh --launch`
+- **Diagnosticar y reparar errores (Linux):** `./doctor.sh` (o `./doctor.sh --fix`)
 
 ### Comandos manuales por distribución
 
@@ -56,11 +63,18 @@ chmod +x launch.sh install_desktop.sh && ./install_desktop.sh && ./launch.sh
 
 ### Windows 10 / 11
 
-```powershell
+**Requisitos previos (una sola vez):**
+1. Instalar **Git para Windows** (`git-scm.com`).
+2. Instalar **Python 3.10+** (`python.org`) marcando la casilla **"Add Python to PATH"**.
+
+**Instalar y abrir en 1 comando (en CMD o PowerShell):**
+```cmd
 git clone https://github.com/net-pyoyect/Netlis.git netlis && cd netlis && install.bat && launch.bat
 ```
 
-Para actualizar en Windows en 1 comando: `update.bat` (o `update.bat --launch`).
+- `install.bat` crea automáticamente `.venv`, instala `PyQt6` + `PyQt6-WebEngine` y crea el acceso directo **Netlis** en el Escritorio.
+- **Actualizar en 1 comando (Windows):** `update.bat --launch`
+- **Diagnosticar y reparar errores (Windows):** `python doctor.py`
 
 > **Nota (Tor):** En Linux puedes instalar `tor` del sistema (`sudo pacman -S tor` / `sudo apt install tor`) o colocarlo en `.tor/`. En Windows, coloca el Tor Expert Bundle en `.tor\tor\tor.exe` o añade `tor.exe` al `PATH`.
 
