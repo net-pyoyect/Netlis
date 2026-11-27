@@ -60,7 +60,7 @@ from security_shield import (
     render_threat_warning_html,
     verify_downloaded_file_safety,
 )
-from stability import install_crash_shield, record_diagnostic
+from stability import atomic_write_json, install_crash_shield, record_diagnostic, safe_load_json
 from storage import BrowserStorage
 from tor_manager import EmbeddedTorManager
 from updater import auto_refresh_threats_async
