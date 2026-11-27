@@ -1005,6 +1005,54 @@ class BrowserWindow(QMainWindow):
             "Se cerró tu sesión de Google y se eliminaron todas sus cookies y datos locales.",
         )
 
+    def _load_google_account_info(self) -> dict[str, str]:
+        info = safe_load_json(self.data_dir / "google_vault" / "account_info.json", {})
+        return info if isinstance(info, dict) else {}
+
+    def _sync_google_vault_account_badge(self, view: QWebEngineView) -> None:
+        if self._google_vault_profile is None or view.page().profile() is not self._google_vault_profile:
+            return
+        if not _is_google_vault_host(view.url().host()):
+            return
+        js = """
+        (() => {
+            try {
+                const emailRe = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/;
+                const elEmail = document.querySelector('[data-email]');
+                if (elEmail) {
+                    const em = (elEmail.getAttribute('data-email') || '').trim();
+                    if (emailRe.test(em)) return { name: (elEmail.textContent || '').trim(), email: em };
+                }
+                const els = document.querySelectorAll('a[aria-label*="@"], button[aria-label*="@"]');
+                for (const el of els) {
+                    const lbl = el.getAttribute('aria-label') || '';
+                    const m = lbl.match(emailRe);
+                    if (m) {
+                        const clean = lbl.replace(/^(Cuenta de Google|Google Account)\\s*:\\s*/i, '');
+                        const name = clean.split('(')[0].replace(m[1], '').trim();
+                        return { name, email: m[1] };
+                    }
+                }
+            } catch (e) {}
+            return null;
+        })();
+        """
+
+        def _on_res(res) -> None:
+            if not isinstance(res, dict):
+                return
+            email = str(res.get("email") or "").strip()
+            name = str(res.get("name") or "").strip()
+            if not email or "@" not in email:
+                return
+            vault_dir = self.data_dir / "google_vault"
+            vault_dir.mkdir(parents=True, exist_ok=True)
+            atomic_write_json(vault_dir / "account_info.json", {"name": name, "email": email})
+            self.google_btn.setIcon(_make_account_avatar_icon(active=True))
+            self.google_btn.setToolTip(f"Cuenta Google aislada ({email}) — ninguna otra app puede ver tu correo")
+
+        view.page().runJavaScript(js, _on_res)
+
     def _show_google_vault_menu(self) -> None:
         from PyQt6.QtWidgets import QFrame
 
@@ -1014,7 +1062,10 @@ class BrowserWindow(QMainWindow):
             except Exception:
                 pass
 
-        vault_active = (self.data_dir / "google_vault" / "storage").exists()
+        acct = self._load_google_account_info()
+        acct_email = str(acct.get("email") or "").strip()
+        acct_name = str(acct.get("name") or "").strip()
+        vault_active = bool(acct_email) or (self.data_dir / "google_vault" / "storage").exists()
         popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
         popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         popup.setFixedWidth(332)
@@ -1081,17 +1132,20 @@ class BrowserWindow(QMainWindow):
 
         txt_col = QVBoxLayout()
         txt_col.setSpacing(1)
-        t_title = QLabel("Cuenta Google aislada" if vault_active else "Inicia sesión en Google")
+        title_str = (acct_name or "Cuenta Google") if acct_email else ("Cuenta Google aislada" if vault_active else "Inicia sesión en Google")
+        sub_str = f"{acct_email} • aislada" if acct_email else "Ninguna otra app ve tu correo"
+        t_title = QLabel(title_str)
         t_title.setStyleSheet("font-weight: 600; font-size: 12.5px; color: #ffffff; background: transparent;")
-        t_sub = QLabel("Ninguna otra app ve tu correo")
+        t_sub = QLabel(sub_str)
         t_sub.setStyleSheet("font-size: 11px; color: rgba(230, 236, 255, 195); background: transparent;")
         txt_col.addWidget(t_title)
         txt_col.addWidget(t_sub)
         b_lay.addLayout(txt_col, 1)
 
-        login_btn = QPushButton("Abrir cuenta" if vault_active else "Iniciar sesión")
+        target_acct_url = "https://myaccount.google.com" if acct_email else "https://accounts.google.com"
+        login_btn = QPushButton("Gestionar" if acct_email else ("Abrir cuenta" if vault_active else "Iniciar sesión"))
         login_btn.setObjectName("googlePrimaryBtn")
-        login_btn.clicked.connect(lambda: (popup.close(), self._open_google_vault("https://accounts.google.com")))
+        login_btn.clicked.connect(lambda: (popup.close(), self._open_google_vault(target_acct_url)))
         b_lay.addWidget(login_btn)
         root.addWidget(banner)
 
@@ -2192,6 +2246,7 @@ class BrowserWindow(QMainWindow):
                 self._inject_netlis_search_logo(view)
             if self.settings.block_youtube_ads and "youtube.com" in url_str:
                 self._inject_youtube_adblock(view)
+            self._sync_google_vault_account_badge(view)
         if ok and not self.incognito and url_str != NEWTAB_URL and not url_str.startswith("about:"):
             self.storage.add_history(view.title(), url_str)
         if view is self._current_view():
