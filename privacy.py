@@ -82,6 +82,51 @@ TRACKER_DOMAINS: tuple[str, ...] = (
     "adsrvr.org",
     "innovid.com",
     "doubleverify.com",
+    "fullstory.com",
+    "logrocket.com",
+    "mouseflow.com",
+    "crazyegg.com",
+    "heap.io",
+    "heapanalytics.com",
+    "pendo.io",
+    "branch.io",
+    "appsflyer.com",
+    "adjust.com",
+    "kochava.com",
+    "singular.net",
+    "fingerprintjs.com",
+    "fpjs.io",
+    "fpnpmcdn.net",
+    "datadoghq-browser-agent.com",
+    "bugsnag.com",
+    "rollbar.com",
+    "hs-analytics.net",
+    "hs-scripts.com",
+    "hsadspixel.net",
+    "snap.licdn.com",
+    "px.ads.linkedin.com",
+    "sc-static.net",
+    "tr.snapchat.com",
+    "ct.pinterest.com",
+    "log.pinterest.com",
+    "media.net",
+    "bidswitch.net",
+    "smartadserver.com",
+    "sharethrough.com",
+    "triplelift.com",
+    "33across.com",
+    "indexww.com",
+    "zemanta.com",
+    "teads.tv",
+    "mgid.com",
+    "revcontent.com",
+    "adform.net",
+    "criteo.net",
+    "chartboost.com",
+    "unityads.unity3d.com",
+    "applovin.com",
+    "vungle.com",
+    "inmobi.com",
 )
 
 TRACKER_PREFIXES: tuple[str, ...] = (
@@ -139,7 +184,50 @@ TRACKING_QUERY_PARAMS: frozenset[str] = frozenset({
     "yclid",
     "_hsenc",
     "_hsmi",
+    "_gl",
+    "gbraid",
+    "wbraid",
+    "msclkid",
+    "ttclid",
+    "twclid",
+    "li_fat_id",
+    "s_kwcid",
+    "vero_id",
+    "oly_enc_id",
+    "oly_anon_id",
+    "wickedid",
+    "epik",
+    "mkt_tok",
+    "utm_id",
+    "utm_source_platform",
+    "utm_creative_format",
+    "utm_marketing_tactic",
+    "ref_src",
+    "ref_url",
+    "rb_clickid",
+    "hsa_acc",
+    "hsa_cam",
+    "hsa_grp",
+    "hsa_ad",
+    "hsa_src",
+    "hsa_tgt",
+    "hsa_kw",
+    "hsa_mt",
+    "hsa_net",
+    "hsa_ver",
 })
+
+TRACKER_3P_PATH_MARKERS: tuple[str, ...] = (
+    "/gtag/js",
+    "/gtm.js",
+    "/fbevents.js",
+    "/analytics.js",
+    "/ga.js",
+    "/g/collect",
+    "/pixel.gif",
+    "/adsct",
+    "/pagead/",
+)
 
 
 @dataclass
@@ -420,6 +508,22 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
             info.block(True)
             self._mark_blocked(site_ctx, host)
             return
+
+        # Bloquear beacons Ping / CSP-Report y rutas clásicas de rastreo de terceros a nivel de red C++
+        if self.settings.block_trackers:
+            rtype = info.resourceType()
+            is_3p = bool(first_party and host and first_party != host)
+            if is_3p and rtype in (
+                QWebEngineUrlRequestInfo.ResourceType.ResourceTypePing,
+                QWebEngineUrlRequestInfo.ResourceType.ResourceTypeCspReport,
+            ):
+                info.block(True)
+                self._mark_blocked(site_ctx, f"{host} (Beacon)")
+                return
+            if is_3p and any(marker in path for marker in TRACKER_3P_PATH_MARKERS):
+                info.block(True)
+                self._mark_blocked(site_ctx, f"{host} (Script/Pixel)")
+                return
 
         if self.settings.block_youtube_ads and is_youtube_ad_request(host, path, query):
             info.block(True)
