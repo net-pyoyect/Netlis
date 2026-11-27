@@ -931,10 +931,10 @@ class BrowserWindow(QMainWindow):
         self._shield_timer.setInterval(200)
         self._shield_timer.timeout.connect(self._update_shield_label)
 
-        # Ahorro automático de RAM: congela y descarta pestañas inactivas en segundo plano
+        # Ahorro automático de RAM: congela y descarta pestañas inactivas según la carga
         self._tab_last_active: dict[QWebEngineView, float] = {}
         self._ram_timer = QTimer(self)
-        self._ram_timer.setInterval(30000)
+        self._ram_timer.setInterval(15000)
         self._ram_timer.timeout.connect(self._suspend_inactive_tabs)
         self._ram_timer.start()
 
@@ -2136,25 +2136,56 @@ class BrowserWindow(QMainWindow):
                 tab_prof.cookieStore().deleteAllCookies()
                 QTimer.singleShot(400, tab_prof.deleteLater)
 
-    def _suspend_inactive_tabs(self, freeze_after_s: float = 90.0, discard_after_s: float = 240.0) -> int:
-        """Congela o libera RAM de las pestañas en segundo plano que llevan tiempo sin usarse."""
+    def _suspend_inactive_tabs(self, freeze_after_s: float | None = None, discard_after_s: float | None = None) -> int:
+        """Congela o descarta pestañas inactivas adaptándose al total abierto (protege audio/Zoom)."""
+        import gc
+
+        total_tabs = self.stack.count()
+        if freeze_after_s is None or discard_after_s is None:
+            if total_tabs >= 12:
+                freeze_s, discard_s = 10.0, 35.0
+            elif total_tabs >= 6:
+                freeze_s, discard_s = 25.0, 75.0
+            else:
+                freeze_s, discard_s = 60.0, 180.0
+        else:
+            freeze_s, discard_s = freeze_after_s, discard_after_s
+
         now = time.monotonic()
         current = self._current_view()
-        suspended = 0
-        for i in range(self.stack.count()):
+        candidates: list[tuple[float, QWebEngineView, QWebEnginePage]] = []
+        for i in range(total_tabs):
             v = self.stack.widget(i)
             if not isinstance(v, QWebEngineView) or v is current:
                 continue
-            idle = now - self._tab_last_active.get(v, now)
             pg = v.page()
             if pg is None:
                 continue
-            if idle >= discard_after_s and pg.lifecycleState() != QWebEnginePage.LifecycleState.Discarded:
+            # Nunca suspender pestañas con audio activo (YouTube/Zoom/Meet)
+            if hasattr(pg, "recentlyAudible") and pg.recentlyAudible():
+                continue
+            idle = now - self._tab_last_active.get(v, now)
+            candidates.append((idle, v, pg))
+
+        # Si hay >= 12 pestañas, conservar como máximo las 3 más recientes sin descartar
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        force_discard_count = max(0, len(candidates) - 3) if total_tabs >= 12 else 0
+        suspended = 0
+        for idx, (idle, _v, pg) in enumerate(candidates):
+            must_discard = idle >= discard_s or idx < force_discard_count
+            if must_discard and pg.lifecycleState() != QWebEnginePage.LifecycleState.Discarded:
                 pg.setLifecycleState(QWebEnginePage.LifecycleState.Discarded)
                 suspended += 1
-            elif idle >= freeze_after_s and pg.lifecycleState() == QWebEnginePage.LifecycleState.Active:
+            elif idle >= freeze_s and pg.lifecycleState() == QWebEnginePage.LifecycleState.Active:
                 pg.setLifecycleState(QWebEnginePage.LifecycleState.Frozen)
                 suspended += 1
+
+        if suspended > 0:
+            if total_tabs >= 8:
+                for prof in self._all_profiles():
+                    if prof.httpCacheType() == QWebEngineProfile.HttpCacheType.MemoryHttpCache:
+                        prof.clearHttpCache()
+            gc.collect()
         return suspended
 
     def _on_tab_moved(self, from_idx: int, to_idx: int) -> None:

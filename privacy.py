@@ -355,7 +355,7 @@ def strip_tracking_from_url(url_str: str) -> str:
 
 def build_chromium_flags(settings: PrivacySettings) -> list[str]:
     """Construye banderas de alto rendimiento, compatibilidad GPU/Wasm y aislamiento estricto de sitios."""
-    js_opts = ["--max-old-space-size=512"]
+    js_opts = ["--max-old-space-size=384"]
     if settings.exploit_shield_jitless:
         js_opts.insert(0, "--jitless")
 
