@@ -25,4 +25,4 @@ fi
 
 # Las banderas unificadas (--site-per-process, StrictOriginIsolation, ThirdPartyStoragePartitioning, --jitless)
 # se construyen e inyectan dinámicamente en browser.py mediante privacy.build_chromium_flags()
-exec -a netlis .venv/bin/python3 browser.py "$@"
+exec .venv/bin/python3 browser.py "$@"
