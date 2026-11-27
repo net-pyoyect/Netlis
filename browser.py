@@ -52,6 +52,7 @@ from dialogs import AppearanceDialog, BraveShieldsPopup, DownloadsDialog, Histor
 from gecko_engine import is_gecko_available, launch_gecko_session
 from netlis_search import render_search_loading_html, render_search_results_html, run_netlis_metasearch
 from newtab import AppearanceSettings, SEARCH_ENGINES, _image_data_uri, render_new_tab_html
+from password_vault import LocalPasswordVault, generate_strong_password, normalize_domain
 from plugins import PluginManager, compile_plugin_source, read_manifest_summary
 from privacy import IP_REGIONS, PrivacySettings, TrackerInterceptor, build_chromium_flags, is_proxy_reachable
 from security_shield import (
@@ -916,6 +917,7 @@ class BrowserWindow(QMainWindow):
         self._tab_profiles: dict[QWebEngineView, QWebEngineProfile] = {}
         self._google_vault_profile: QWebEngineProfile | None = None
         self._session_media_permissions: dict[tuple[str, int], bool] = {}
+        self.pass_vault = LocalPasswordVault(self.data_dir / "passwords_vault.enc")
         self.blocked_downloads = 0
         self.downloads_records: list[dict] = []
         self._closed_tabs: list[tuple[str, str]] = []
@@ -1207,6 +1209,169 @@ class BrowserWindow(QMainWindow):
         popup.move(pos.x() - popup.width(), pos.y() + 6)
         self._google_popup = popup
         popup.show()
+
+    def _show_password_vault(self) -> None:
+        from PyQt6.QtWidgets import QDialog, QInputDialog, QListWidget
+
+        if not self.pass_vault.exists():
+            pw1, ok1 = QInputDialog.getText(
+                self,
+                "Crear Bóveda de Contraseñas — Netlis",
+                "Crea una contraseña maestra (mín. 6 caracteres).\n"
+                "Tus claves se cifran localmente en tu PC (cero nube, cero Google):",
+                QLineEdit.EchoMode.Password,
+            )
+            if not ok1 or not pw1:
+                return
+            pw2, ok2 = QInputDialog.getText(
+                self,
+                "Confirmar contraseña maestra",
+                "Repite tu contraseña maestra:",
+                QLineEdit.EchoMode.Password,
+            )
+            if not ok2 or pw1 != pw2:
+                QMessageBox.warning(self, "Bóveda de Contraseñas", "Las contraseñas no coinciden.")
+                return
+            try:
+                self.pass_vault.create(pw1)
+            except ValueError as exc:
+                QMessageBox.warning(self, "Bóveda de Contraseñas", str(exc))
+                return
+        elif not self.pass_vault.is_unlocked():
+            pw, ok = QInputDialog.getText(
+                self,
+                "Desbloquear Bóveda — Netlis",
+                "Ingresa tu contraseña maestra para abrir tus claves locales:",
+                QLineEdit.EchoMode.Password,
+            )
+            if not ok or not pw:
+                return
+            try:
+                self.pass_vault.unlock(pw)
+            except ValueError as exc:
+                QMessageBox.warning(self, "Error al desbloquear", str(exc))
+                return
+
+        cur_view = self._current_view()
+        cur_host = normalize_domain(cur_view.url().host()) if cur_view is not None else ""
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Bóveda Local Cifrada — Netlis (Cero Nube)")
+        dlg.resize(540, 440)
+        dlg.setStyleSheet(
+            "QDialog { background: #1e1d26; color: #f0f0f5; } "
+            "QLineEdit, QListWidget { background: #14131a; color: #f0f0f5; border: 1px solid #353445; border-radius: 6px; padding: 6px; } "
+            "QPushButton { background: #2c2b38; color: #f0f0f5; border: 1px solid #3f3e52; border-radius: 6px; padding: 6px 10px; } "
+            "QPushButton:hover { background: #3b82f6; }"
+        )
+        lay = QVBoxLayout(dlg)
+
+        info_lbl = QLabel(
+            f"Sitio actual: {cur_host or '(ninguno)'}   •   Cifrado local scrypt + HMAC-SHA256"
+        )
+        info_lbl.setStyleSheet("color: #93c5fd; font-size: 12px;")
+        lay.addWidget(info_lbl)
+
+        list_w = QListWidget()
+        lay.addWidget(list_w, 1)
+
+        def _refresh_list() -> None:
+            list_w.clear()
+            all_items = self.pass_vault.entries()
+            all_items.sort(key=lambda e: (0 if cur_host and normalize_domain(e.domain) == cur_host else 1, e.domain, e.username))
+            for e in all_items:
+                tag = "★ " if cur_host and normalize_domain(e.domain) == cur_host else ""
+                list_w.addItem(f"{tag}{e.domain}  —  {e.username}")
+
+        _refresh_list()
+
+        form_row = QHBoxLayout()
+        dom_in = QLineEdit(cur_host)
+        dom_in.setPlaceholderText("Dominio (ej. github.com)")
+        usr_in = QLineEdit()
+        usr_in.setPlaceholderText("Usuario o correo")
+        pwd_in = QLineEdit()
+        pwd_in.setPlaceholderText("Contraseña")
+        pwd_in.setEchoMode(QLineEdit.EchoMode.Password)
+        gen_btn = QPushButton("🎲")
+        gen_btn.setToolTip("Generar contraseña fuerte de 20 caracteres")
+        gen_btn.clicked.connect(lambda: (pwd_in.setText(generate_strong_password()), pwd_in.setEchoMode(QLineEdit.EchoMode.Normal)))
+        save_btn = QPushButton("Guardar")
+
+        def _on_save() -> None:
+            try:
+                self.pass_vault.add_or_update(dom_in.text(), usr_in.text(), pwd_in.text())
+                usr_in.clear()
+                pwd_in.clear()
+                _refresh_list()
+            except ValueError as exc:
+                QMessageBox.warning(dlg, "Bóveda", str(exc))
+
+        save_btn.clicked.connect(_on_save)
+        for w_item in (dom_in, usr_in, pwd_in, gen_btn, save_btn):
+            form_row.addWidget(w_item)
+        lay.addLayout(form_row)
+
+        act_row = QHBoxLayout()
+        fill_btn = QPushButton("Rellenar en esta página")
+        cp_user_btn = QPushButton("Copiar usuario")
+        cp_pwd_btn = QPushButton("Copiar clave")
+        del_btn = QPushButton("Eliminar")
+        lock_btn = QPushButton("🔒 Bloquear")
+
+        def _selected_entry():
+            idx = list_w.currentRow()
+            items = self.pass_vault.entries()
+            items.sort(key=lambda e: (0 if cur_host and normalize_domain(e.domain) == cur_host else 1, e.domain, e.username))
+            if 0 <= idx < len(items):
+                return items[idx]
+            return None
+
+        def _fill_current() -> None:
+            ent = _selected_entry()
+            if ent is None or cur_view is None:
+                return
+            if normalize_domain(ent.domain) != cur_host:
+                QMessageBox.warning(
+                    dlg,
+                    "Bloqueo de seguridad",
+                    f"Esta clave pertenece a '{ent.domain}', no a '{cur_host}'.\n"
+                    "Netlis nunca envía contraseñas a otros dominios.",
+                )
+                return
+            js_fill = f"""
+            (() => {{
+                const u = {json.dumps(ent.username)};
+                const p = {json.dumps(ent.password)};
+                const pwEl = document.querySelector('input[type="password"]');
+                if (!pwEl) return false;
+                const form = pwEl.form || document;
+                const uEl = form.querySelector('input[type="email"], input[name*="user" i], input[name*="mail" i], input[type="text"]');
+                const setVal = (el, val) => {{
+                    if (!el) return;
+                    el.focus();
+                    el.value = val;
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }};
+                setVal(uEl, u);
+                setVal(pwEl, p);
+                return true;
+            }})();
+            """
+            cur_view.page().runJavaScript(js_fill)
+            dlg.accept()
+
+        fill_btn.clicked.connect(_fill_current)
+        cp_user_btn.clicked.connect(lambda: _selected_entry() and QApplication.clipboard().setText(_selected_entry().username))
+        cp_pwd_btn.clicked.connect(lambda: _selected_entry() and QApplication.clipboard().setText(_selected_entry().password))
+        del_btn.clicked.connect(lambda: _selected_entry() and (self.pass_vault.delete(_selected_entry().domain, _selected_entry().username), _refresh_list()))
+        lock_btn.clicked.connect(lambda: (self.pass_vault.lock(), dlg.accept()))
+
+        for b_item in (fill_btn, cp_user_btn, cp_pwd_btn, del_btn, lock_btn):
+            act_row.addWidget(b_item)
+        lay.addLayout(act_row)
+        dlg.exec()
 
     def _configure_web_profile(self, prof: QWebEngineProfile) -> None:
         prof.setUrlRequestInterceptor(self.interceptor)
@@ -1561,6 +1726,12 @@ class BrowserWindow(QMainWindow):
         dl_btn.setToolTip("Descargas (Ctrl+J)")
         dl_btn.clicked.connect(self._show_downloads)
         nav_bar.addWidget(dl_btn)
+
+        vault_btn = QPushButton("🔑")
+        vault_btn.setObjectName("pluginIconBtn")
+        vault_btn.setToolTip("Bóveda local cifrada de contraseñas (cero nube, cero Google)")
+        vault_btn.clicked.connect(self._show_password_vault)
+        nav_bar.addWidget(vault_btn)
 
         self.turbo_btn = QPushButton(self._mode_button_text())
         self.turbo_btn.setObjectName("ipBtn")
@@ -2778,6 +2949,7 @@ class BrowserWindow(QMainWindow):
             if w is not None and not sip.isdeleted(w):
                 sip.delete(w)
         self._tab_profiles.clear()
+        self.pass_vault.lock()
         if self.settings.clear_on_exit:
             self._wipe_browsing_data()
         if self in self._open_windows:
