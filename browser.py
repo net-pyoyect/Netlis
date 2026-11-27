@@ -617,6 +617,29 @@ def _make_plugin_puzzle_icon() -> QIcon:
     return QIcon(pm)
 
 
+def _make_account_avatar_icon(active: bool = False) -> QIcon:
+    """Dibuja un ícono circular de cuenta/perfil estilo Firefox para la Bóveda Google."""
+    pm = QPixmap(22, 22)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    ring_color = QColor(96, 165, 250) if active else QColor(235, 235, 245, 210)
+    p.setPen(QPen(ring_color, 1.6))
+    p.setBrush(QColor(96, 165, 250, 45) if active else QColor(255, 255, 255, 22))
+    p.drawEllipse(QRectF(2.0, 2.0, 18.0, 18.0))
+    # Cabeza y hombros
+    fg = QColor(242, 242, 252)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(fg)
+    p.drawEllipse(QRectF(8.3, 6.2, 5.4, 5.4))
+    shoulders = QPainterPath()
+    shoulders.moveTo(5.6, 17.2)
+    shoulders.quadTo(11.0, 12.2, 16.4, 17.2)
+    p.drawPath(shoulders)
+    p.end()
+    return QIcon(pm)
+
+
 def normalize_input_to_url(raw: str, search_engine: str = "duckduckgo") -> QUrl:
     """Convierte texto de la barra de direcciones en URL o búsqueda con el buscador elegido."""
     text = raw.strip()
@@ -983,14 +1006,133 @@ class BrowserWindow(QMainWindow):
         )
 
     def _show_google_vault_menu(self) -> None:
-        menu = QMenu(self)
-        menu.addAction("Abrir Cuenta de Google (aislada)", lambda: self._open_google_vault("https://accounts.google.com"))
-        menu.addAction("Abrir Gmail (aislado)", lambda: self._open_google_vault("https://mail.google.com"))
-        menu.addAction("Abrir Google Drive (aislado)", lambda: self._open_google_vault("https://drive.google.com"))
-        menu.addAction("Abrir YouTube (en Bóveda Google)", lambda: self._open_google_vault("https://www.youtube.com"))
-        menu.addSeparator()
-        menu.addAction("Cerrar sesión y borrar Bóveda Google", self._wipe_google_vault)
-        menu.exec(self.google_btn.mapToGlobal(self.google_btn.rect().bottomLeft()))
+        from PyQt6.QtWidgets import QFrame
+
+        if getattr(self, "_google_popup", None) is not None:
+            try:
+                self._google_popup.close()
+            except Exception:
+                pass
+
+        vault_active = (self.data_dir / "google_vault" / "storage").exists()
+        popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        popup.setFixedWidth(332)
+        popup.setStyleSheet(
+            """
+            QFrame#googleVaultCard {
+                background-color: #2b2a33;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 12px;
+                color: #f0f0f5;
+            }
+            QFrame#googleBanner {
+                background-color: rgba(66, 133, 244, 0.20);
+                border: 1px solid rgba(100, 160, 255, 0.28);
+                border-radius: 10px;
+            }
+            QPushButton#googlePrimaryBtn {
+                background-color: #3b82f6;
+                color: #ffffff;
+                border: none;
+                border-radius: 14px;
+                padding: 6px 14px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton#googlePrimaryBtn:hover { background-color: #2563eb; }
+            QPushButton#googleRowBtn {
+                background: transparent;
+                color: #eaeaf2;
+                border: none;
+                border-radius: 7px;
+                padding: 7px 10px;
+                text-align: left;
+                font-size: 12.5px;
+            }
+            QPushButton#googleRowBtn:hover { background-color: rgba(255, 255, 255, 0.09); }
+            QPushButton#googleDangerBtn {
+                background: transparent;
+                color: #fca5a5;
+                border: none;
+                border-radius: 7px;
+                padding: 7px 10px;
+                text-align: left;
+                font-size: 12.5px;
+            }
+            QPushButton#googleDangerBtn:hover { background-color: rgba(239, 68, 68, 0.16); }
+            """
+        )
+        popup.setObjectName("googleVaultCard")
+        root = QVBoxLayout(popup)
+        root.setContentsMargins(10, 10, 10, 10)
+        root.setSpacing(6)
+
+        # Tarjeta superior estilo Firefox
+        banner = QFrame()
+        banner.setObjectName("googleBanner")
+        b_lay = QHBoxLayout(banner)
+        b_lay.setContentsMargins(10, 10, 10, 10)
+        b_lay.setSpacing(10)
+
+        av_lbl = QLabel()
+        av_lbl.setPixmap(_make_account_avatar_icon(active=True).pixmap(28, 28))
+        b_lay.addWidget(av_lbl)
+
+        txt_col = QVBoxLayout()
+        txt_col.setSpacing(1)
+        t_title = QLabel("Cuenta Google aislada" if vault_active else "Inicia sesión en Google")
+        t_title.setStyleSheet("font-weight: 600; font-size: 12.5px; color: #ffffff; background: transparent;")
+        t_sub = QLabel("Ninguna otra app ve tu correo")
+        t_sub.setStyleSheet("font-size: 11px; color: rgba(230, 236, 255, 195); background: transparent;")
+        txt_col.addWidget(t_title)
+        txt_col.addWidget(t_sub)
+        b_lay.addLayout(txt_col, 1)
+
+        login_btn = QPushButton("Abrir cuenta" if vault_active else "Iniciar sesión")
+        login_btn.setObjectName("googlePrimaryBtn")
+        login_btn.clicked.connect(lambda: (popup.close(), self._open_google_vault("https://accounts.google.com")))
+        b_lay.addWidget(login_btn)
+        root.addWidget(banner)
+
+        sec1 = QLabel("Servicios Google (en bóveda)")
+        sec1.setStyleSheet("color: rgba(210, 210, 225, 150); font-size: 11px; font-weight: 600; padding: 4px 6px 0 6px;")
+        root.addWidget(sec1)
+
+        for icon_txt, url in (
+            ("✉   Gmail (aislado)", "https://mail.google.com"),
+            ("▲   Google Drive (aislado)", "https://drive.google.com"),
+            ("📅   Google Calendar (aislado)", "https://calendar.google.com"),
+            ("▶   YouTube (en bóveda)", "https://www.youtube.com"),
+        ):
+            row = QPushButton(icon_txt)
+            row.setObjectName("googleRowBtn")
+            row.clicked.connect(lambda _c=False, u=url: (popup.close(), self._open_google_vault(u)))
+            root.addWidget(row)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("background-color: rgba(255, 255, 255, 0.10); max-height: 1px; margin: 2px 4px;")
+        root.addWidget(sep)
+
+        sec2 = QLabel("Herramientas de privacidad")
+        sec2.setStyleSheet("color: rgba(210, 210, 225, 150); font-size: 11px; font-weight: 600; padding: 2px 6px 0 6px;")
+        root.addWidget(sec2)
+
+        shield_info = QLabel("🛡  Cerco activo: los enlaces externos se abren\n      en pestaña limpia sin tus cookies de Google.")
+        shield_info.setStyleSheet("color: rgba(220, 224, 240, 195); font-size: 11.5px; padding: 4px 10px;")
+        root.addWidget(shield_info)
+
+        wipe_btn = QPushButton("🗑   Cerrar sesión y borrar Bóveda Google")
+        wipe_btn.setObjectName("googleDangerBtn")
+        wipe_btn.clicked.connect(lambda: (popup.close(), self._wipe_google_vault()))
+        root.addWidget(wipe_btn)
+
+        popup.adjustSize()
+        pos = self.google_btn.mapToGlobal(self.google_btn.rect().bottomRight())
+        popup.move(pos.x() - popup.width(), pos.y() + 6)
+        self._google_popup = popup
+        popup.show()
 
     def _configure_web_profile(self, prof: QWebEngineProfile) -> None:
         prof.setUrlRequestInterceptor(self.interceptor)
@@ -1325,10 +1467,14 @@ class BrowserWindow(QMainWindow):
         self.turbo_btn.clicked.connect(self._toggle_turbo_mode)
         nav_bar.addWidget(self.turbo_btn)
 
-        self.google_btn = QPushButton("G Cuenta")
-        self.google_btn.setObjectName("ipBtn")
+        self.google_btn = QPushButton()
+        self.google_btn.setObjectName("pluginIconBtn")
+        self.google_btn.setIcon(
+            _make_account_avatar_icon(active=(self.data_dir / "google_vault" / "storage").exists())
+        )
+        self.google_btn.setIconSize(QSize(20, 20))
         self.google_btn.setToolTip(
-            "Sesión aislada de Google: ninguna otra web o app puede ver tu correo ni tus cookies"
+            "Cuenta Google aislada: ninguna otra web o app puede ver tu correo ni tus cookies"
         )
         self.google_btn.clicked.connect(self._show_google_vault_menu)
         nav_bar.addWidget(self.google_btn)
