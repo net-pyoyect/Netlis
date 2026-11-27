@@ -501,7 +501,7 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
             return
 
         # Bloquear servicios web espía de geolocalización por IP incrustados en páginas (lookup O(1))
-        if spy_guard_on and _host_in_domain_set(host, GEOIP_SPY_DOMAINS_SET):
+        if (spy_guard_on or self.settings.anti_fingerprinting) and _host_in_domain_set(host, GEOIP_SPY_DOMAINS_SET):
             info.block(True)
             self._mark_blocked(site_ctx, f"{host} (GeoIP)")
             return
