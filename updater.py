@@ -352,12 +352,27 @@ def check_app_update(proj_dir: Path | None = None, manifest_url: str = "") -> di
         remote = json.loads(raw)
         remote_ver = str(remote.get("version") or local_ver)
         has_upd = parse_semver(remote_ver) > parse_semver(local_ver)
+        notes = str(remote.get("notes") or "")
+        if not has_upd and (root / ".git").is_dir():
+            subprocess.run(["git", "-C", str(root), "fetch", "--quiet"], timeout=8, check=False)
+            res = subprocess.run(
+                ["git", "-C", str(root), "rev-list", "--count", "HEAD..@{u}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            ahead = int((res.stdout or "0").strip() or "0")
+            if ahead > 0:
+                has_upd = True
+                remote_ver = f"{remote_ver}+{ahead}"
+                notes = f"{ahead} nuevos commits disponibles en GitHub."
         return {
             "ok": True,
             "has_update": has_upd,
             "local_version": local_ver,
             "remote_version": remote_ver,
-            "notes": str(remote.get("notes") or ""),
+            "notes": notes,
             "repo": repo,
             "branch": branch,
         }
@@ -381,11 +396,22 @@ def apply_app_update(proj_dir: Path | None = None, archive_url: str = "") -> tup
             check=False,
         )
         if res.returncode != 0:
+            res = subprocess.run(
+                ["git", "-C", str(root), "pull", "--rebase", "--autostash"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        if res.returncode != 0:
             return False, f"No se pudo actualizar vía git: {(res.stderr or res.stdout).strip()[:160]}"
         pip_bin = root / ".venv" / ("Scripts/pip.exe" if sys.platform == "win32" else "bin/pip")
         req_file = root / "requirements.txt"
         if pip_bin.is_file() and req_file.is_file():
             subprocess.run([str(pip_bin), "install", "-r", str(req_file), "--quiet"], capture_output=True, timeout=60, check=False)
+        desk_sh = root / "install_desktop.sh"
+        if sys.platform != "win32" and desk_sh.is_file():
+            subprocess.run(["bash", str(desk_sh)], capture_output=True, timeout=15, check=False)
         new_ver = get_local_version_info(root).get("version", "?")
         return True, f"Netlis actualizado vía Git a v{new_ver}. Reinicia para aplicar."
 
