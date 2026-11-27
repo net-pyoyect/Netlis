@@ -609,6 +609,39 @@ BUILTIN_PLUGINS: tuple[PluginDefinition, ...] = (
         """,
     ),
     PluginDefinition(
+        plugin_id="ublock-cosmetic",
+        name="Filtro Cosmético estilo uBlock Origin",
+        category="Privacidad",
+        icon_kind="radar_shield",
+        accent_hex="#ef4444",
+        description="Oculta marcos vacíos de anuncios, banners patrocinados y contenedores publicitarios (estilo uBlock).",
+        js_code="""
+        (() => {
+            if (window.__netlisUblockCosmetic) return;
+            window.__netlisUblockCosmetic = true;
+            const css = `
+                ins.adsbygoogle, .adsbygoogle, [id^="div-gpt-ad"], [data-ad-slot],
+                [data-google-query-id], .ad-banner, .ad-container, .sponsored-post,
+                [aria-label="Publicidad"], [aria-label="Advertisement"] {
+                    display: none !important;
+                    visibility: hidden !important;
+                    height: 0 !important;
+                    min-height: 0 !important;
+                }
+            `;
+            const inject = () => {
+                if (document.getElementById('__netlis_ublock_css')) return;
+                const s = document.createElement('style');
+                s.id = '__netlis_ublock_css';
+                s.textContent = css;
+                (document.head || document.documentElement).appendChild(s);
+            };
+            if (document.documentElement) inject();
+            else window.addEventListener('DOMContentLoaded', inject);
+        })();
+        """,
+    ),
+    PluginDefinition(
         plugin_id="link-inspector",
         name="Inspector Seguro de Enlaces",
         category="Seguridad",

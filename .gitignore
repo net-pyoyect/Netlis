@@ -15,6 +15,7 @@ data/plugins.json
 data/passwords_vault.enc
 data/update_status.json
 data/threat_domains.txt*
+data/ublock_domains.txt*
 data/tor_consensus/
 data/profile/
 data/google_vault/

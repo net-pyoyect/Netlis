@@ -24,6 +24,10 @@ THREAT_FEEDS: tuple[str, ...] = (
     "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-hosts.txt",
     "https://phishing.army/download/phishing_army_blocklist.txt",
 )
+UBLOCK_FILTER_FEEDS: tuple[str, ...] = (
+    "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext",
+    "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+)
 
 THREAT_REFRESH_INTERVAL_S = 12 * 3600       # Cada 12 horas
 ENGINE_CHECK_INTERVAL_S = 3 * 24 * 3600     # Cada 3 días
@@ -534,11 +538,51 @@ def auto_update_engine_if_due(data_dir: Path | None = None, interval_s: int = EN
     return False
 
 
+def update_ublock_lists(data_dir: Path | None = None, timeout: float = 16.0) -> tuple[bool, int, str]:
+    """Descarga y actualiza listas de bloqueo estilo uBlock Origin (Peter Lowe + StevenBlack)."""
+    target_dir = data_dir or (Path(__file__).resolve().parent / "data")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    collected: set[str] = set()
+    for url in UBLOCK_FILTER_FEEDS:
+        try:
+            text = _download_feed_text(url, timeout=timeout)
+            for raw_ln in text.splitlines():
+                ln = raw_ln.strip()
+                if not ln or ln.startswith("#"):
+                    continue
+                parts = ln.split()
+                dom = parts[1].lower().strip(".") if len(parts) >= 2 and parts[0] in ("0.0.0.0", "127.0.0.1") else ""
+                if dom and dom not in ("localhost", "local", "0.0.0.0") and "." in dom and len(dom) <= 253:
+                    collected.add(dom)
+        except Exception:
+            continue
+    if len(collected) < 1000:
+        return False, 0, "No se pudieron descargar suficientes reglas uBlock."
+    out_file = target_dir / "ublock_domains.txt"
+    tmp = out_file.with_suffix(".tmp")
+    tmp.write_text("\n".join(sorted(collected)) + "\n", encoding="utf-8")
+    tmp.replace(out_file)
+    try:
+        from privacy import reload_ublock_domains
+
+        reload_ublock_domains(out_file)
+    except Exception:
+        pass
+    return True, len(collected), f"Listas uBlock actualizadas: {len(collected):,} dominios."
+
+
 def auto_refresh_threats_async(data_dir: Path | None = None) -> None:
-    """Ejecuta en segundo plano el demonio de mantenimiento criptográfico (firmas cada 12h + motor cada 3d)."""
+    """Ejecuta en segundo plano el demonio de mantenimiento criptográfico (firmas cada 12h + uBlock + motor cada 3d)."""
     target_dir = data_dir or (Path(__file__).resolve().parent / "data")
     out_file = target_dir / "threat_domains.txt"
+    ublock_file = target_dir / "ublock_domains.txt"
     security_shield.reload_threat_domains(out_file)
+    try:
+        from privacy import reload_ublock_domains
+
+        reload_ublock_domains(ublock_file)
+    except Exception:
+        pass
 
     def _background_maintenance() -> None:
         svc_path, tmr_path = systemd_timer_paths()
@@ -557,6 +601,11 @@ def auto_refresh_threats_async(data_dir: Path | None = None) -> None:
                 threat_sha256=sha256_file(out_file),
                 threat_count=len(security_shield.DYNAMIC_THREAT_DOMAINS),
             )
+        needs_ublock = not ublock_file.exists() or (
+            time.time() - ublock_file.stat().st_mtime > THREAT_REFRESH_INTERVAL_S
+        )
+        if needs_ublock:
+            update_ublock_lists(target_dir)
         auto_update_engine_if_due(target_dir)
 
     threading.Thread(target=_background_maintenance, daemon=True).start()

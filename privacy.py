@@ -309,6 +309,28 @@ TRACKER_DOMAINS_SET: frozenset[str] = frozenset(TRACKER_DOMAINS)
 GEOIP_SPY_DOMAINS_SET: frozenset[str] = frozenset(GEOIP_SPY_DOMAINS)
 
 
+_UBLOCK_DOMAINS_FILE = Path(__file__).resolve().parent / "data" / "ublock_domains.txt"
+
+
+def _load_ublock_domains(path: Path = _UBLOCK_DOMAINS_FILE) -> frozenset[str]:
+    if not path.is_file():
+        return frozenset()
+    try:
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        return frozenset(ln.strip().lower() for ln in lines if ln.strip() and not ln.startswith("#"))
+    except OSError:
+        return frozenset()
+
+
+UBLOCK_DYNAMIC_DOMAINS_SET: frozenset[str] = _load_ublock_domains()
+
+
+def reload_ublock_domains(path: Path = _UBLOCK_DOMAINS_FILE) -> int:
+    global UBLOCK_DYNAMIC_DOMAINS_SET
+    UBLOCK_DYNAMIC_DOMAINS_SET = _load_ublock_domains(path)
+    return len(UBLOCK_DYNAMIC_DOMAINS_SET)
+
+
 def _host_in_domain_set(host: str, domain_set: frozenset[str]) -> bool:
     if host in domain_set:
         return True
@@ -326,6 +348,8 @@ def is_tracker_host(host: str) -> bool:
     if not h:
         return False
     if _host_in_domain_set(h, TRACKER_DOMAINS_SET):
+        return True
+    if UBLOCK_DYNAMIC_DOMAINS_SET and _host_in_domain_set(h, UBLOCK_DYNAMIC_DOMAINS_SET):
         return True
     return any(h.startswith(prefix) for prefix in TRACKER_PREFIXES)
 
