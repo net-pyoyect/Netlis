@@ -47,7 +47,7 @@ echo "[*] Instalando PyQt6 y PyQt6-WebEngine..."
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
 
-chmod +x launch.sh install_desktop.sh release.py
+chmod +x launch.sh install_desktop.sh update.sh release.py
 ./install_desktop.sh
 
 echo ""
