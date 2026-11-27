@@ -16,5 +16,6 @@ data/update_status.json
 data/threat_domains.txt*
 data/tor_consensus/
 data/profile/
+data/google_vault/
 data/custom_plugins/
 data/web_extensions/
