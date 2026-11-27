@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repo": "net-pyoyect/Netlis",
   "branch": "main",
-  "notes": "Lanzamiento inicial de Netlis Browser"
+  "notes": "Netlis Windows .exe, Bóveda local, Zoom y Modo Día a día"
 }
