@@ -457,6 +457,192 @@ BUILTIN_PLUGINS: tuple[PluginDefinition, ...] = (
         })();
         """,
     ),
+    PluginDefinition(
+        plugin_id="sponsor-skip",
+        name="Auto-Saltar Anuncios y Modales YouTube",
+        category="Multimedia",
+        icon_kind="speed",
+        accent_hex="#ff5252",
+        description="Pulsa automáticamente 'Saltar anuncio' en YouTube y cierra carteles anti-bloqueador.",
+        js_code="""
+        (() => {
+            if (!location.hostname.includes('youtube.com') || window.__netlisYtSkip) return;
+            window.__netlisYtSkip = true;
+            setInterval(() => {
+                for (const sel of ['.ytp-skip-ad-button', '.ytp-ad-skip-button', '.ytp-ad-skip-button-modern', '.ytp-ad-overlay-close-button']) {
+                    const btn = document.querySelector(sel);
+                    if (btn) btn.click();
+                }
+                const video = document.querySelector('video');
+                const adShowing = document.querySelector('.ad-showing');
+                if (video && adShowing && isFinite(video.duration) && video.duration > 0) {
+                    video.muted = true;
+                    video.currentTime = video.duration;
+                }
+                const dlg = document.querySelector('tp-yt-paper-dialog ytd-enforcement-message-view-model');
+                if (dlg) {
+                    const p = dlg.closest('tp-yt-paper-dialog');
+                    if (p) p.remove();
+                    if (video && video.paused) video.play().catch(() => {});
+                }
+            }, 650);
+        })();
+        """,
+    ),
+    PluginDefinition(
+        plugin_id="anti-scroll-lock",
+        name="Desbloquear Scroll y Popups (Alt+L)",
+        category="Privacidad",
+        icon_kind="cookie",
+        accent_hex="#f59e0b",
+        description="Pulsa Alt+L para quitar carteles de registro/newsletter que tapan la pantalla y bloquean el scroll.",
+        js_code="""
+        (() => {
+            if (window.__netlisScrollUnlock) return;
+            window.__netlisScrollUnlock = true;
+            window.addEventListener('keydown', (e) => {
+                if (e.altKey && e.key.toLowerCase() === 'l') {
+                    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                    if (document.body) document.body.style.setProperty('overflow', 'auto', 'important');
+                    document.querySelectorAll('div, section, aside').forEach((el) => {
+                        const st = getComputedStyle(el);
+                        if ((st.position === 'fixed' || st.position === 'sticky') && parseInt(st.zIndex || '0', 10) >= 999) {
+                            const r = el.getBoundingClientRect();
+                            if (r.width > window.innerWidth * 0.45 && r.height > window.innerHeight * 0.35) {
+                                el.remove();
+                            }
+                        }
+                    });
+                }
+            });
+        })();
+        """,
+    ),
+    PluginDefinition(
+        plugin_id="quick-notes",
+        name="Notas Rápidas Flotantes (Alt+N)",
+        category="Productividad",
+        icon_kind="reader",
+        accent_hex="#38bdf8",
+        description="Pulsa Alt+N para abrir un bloc de notas flotante en cualquier página y copiar o guardar apuntes.",
+        js_code="""
+        (() => {
+            if (window.__netlisNotesBound) return;
+            window.__netlisNotesBound = true;
+            window.addEventListener('keydown', (e) => {
+                if (!e.altKey || e.key.toLowerCase() !== 'n') return;
+                let box = document.getElementById('__netlis_notes_box');
+                if (box) { box.remove(); return; }
+                box = document.createElement('div');
+                box.id = '__netlis_notes_box';
+                box.style.cssText = 'position:fixed;right:18px;bottom:18px;width:290px;background:#1c1b24;color:#f1f5f9;border:1px solid rgba(255,255,255,0.18);border-radius:12px;padding:10px;z-index:2147483647;box-shadow:0 10px 30px rgba(0,0,0,0.45);font-family:sans-serif;';
+                const hdr = document.createElement('div');
+                hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;font-weight:600;';
+                hdr.textContent = 'Notas Netlis (' + location.hostname + ')';
+                const ta = document.createElement('textarea');
+                ta.style.cssText = 'width:100%;height:140px;background:#121118;color:#e2e8f0;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px;resize:vertical;font-size:12px;box-sizing:border-box;';
+                const key = '__netlis_note_' + location.hostname;
+                try { ta.value = localStorage.getItem(key) || ''; } catch (_) {}
+                ta.addEventListener('input', () => { try { localStorage.setItem(key, ta.value); } catch (_) {} });
+                const cp = document.createElement('button');
+                cp.textContent = 'Copiar notas';
+                cp.style.cssText = 'margin-top:6px;background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;';
+                cp.onclick = () => navigator.clipboard && navigator.clipboard.writeText(ta.value);
+                box.append(hdr, ta, cp);
+                document.body.appendChild(box);
+                ta.focus();
+            });
+        })();
+        """,
+    ),
+    PluginDefinition(
+        plugin_id="blue-light-filter",
+        name="Filtro Luz Azul Nocturno (Alt+B)",
+        category="Apariencia",
+        icon_kind="moon",
+        accent_hex="#fbbf24",
+        description="Pulsa Alt+B para activar un filtro cálido anti-luz azul que descansa la vista de noche.",
+        js_code="""
+        (() => {
+            if (window.__netlisBlueBound) return;
+            window.__netlisBlueBound = true;
+            window.addEventListener('keydown', (e) => {
+                if (!e.altKey || e.key.toLowerCase() !== 'b') return;
+                let ov = document.getElementById('__netlis_blue_ov');
+                if (ov) { ov.remove(); return; }
+                ov = document.createElement('div');
+                ov.id = '__netlis_blue_ov';
+                ov.style.cssText = 'position:fixed;inset:0;background:rgba(255,168,60,0.16);pointer-events:none;z-index:2147483646;mix-blend-mode:multiply;';
+                document.documentElement.appendChild(ov);
+            });
+        })();
+        """,
+    ),
+    PluginDefinition(
+        plugin_id="json-pretty",
+        name="Formateador Automático de JSON",
+        category="Utilidades",
+        icon_kind="copy",
+        accent_hex="#a78bfa",
+        description="Formatea respuestas JSON crudas en el navegador con indentación limpia y botón para copiar.",
+        js_code="""
+        (() => {
+            if (window.__netlisJsonPretty) return;
+            window.__netlisJsonPretty = true;
+            window.addEventListener('DOMContentLoaded', () => {
+                if (document.contentType !== 'application/json') return;
+                const pre = document.querySelector('pre');
+                if (!pre) return;
+                try {
+                    const obj = JSON.parse(pre.textContent || '');
+                    const pretty = JSON.stringify(obj, null, 2);
+                    pre.textContent = pretty;
+                    pre.style.cssText = 'background:#14131a;color:#a5f3fc;padding:18px;font-family:monospace;font-size:13px;line-height:1.45;margin:0;min-height:100vh;';
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Copiar JSON';
+                    btn.style.cssText = 'position:fixed;top:12px;right:14px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;';
+                    btn.onclick = () => navigator.clipboard && navigator.clipboard.writeText(pretty);
+                    document.body.appendChild(btn);
+                } catch (_) {}
+            });
+        })();
+        """,
+    ),
+    PluginDefinition(
+        plugin_id="link-inspector",
+        name="Inspector Seguro de Enlaces",
+        category="Seguridad",
+        icon_kind="radar_shield",
+        accent_hex="#10b981",
+        description="Muestra el dominio real de destino al pasar el mouse sobre cualquier enlace para evitar engaños.",
+        js_code="""
+        (() => {
+            if (window.__netlisLinkInspector) return;
+            window.__netlisLinkInspector = true;
+            let tip = null;
+            const show = (txt) => {
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.style.cssText = 'position:fixed;left:10px;bottom:10px;max-width:70vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(18,18,26,0.92);color:#6ee7b7;border:1px solid rgba(110,231,183,0.35);border-radius:8px;padding:4px 9px;font:11.5px monospace;z-index:2147483647;pointer-events:none;';
+                    document.documentElement.appendChild(tip);
+                }
+                tip.textContent = txt;
+                tip.style.display = 'block';
+            };
+            document.addEventListener('mouseover', (e) => {
+                const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+                if (a && a.href && /^https?:/i.test(a.href)) {
+                    try {
+                        const u = new URL(a.href);
+                        show(u.hostname + u.pathname.slice(0, 48));
+                    } catch (_) {}
+                } else if (tip) {
+                    tip.style.display = 'none';
+                }
+            }, true);
+        })();
+        """,
+    ),
 )
 
 
