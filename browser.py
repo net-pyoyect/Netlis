@@ -1108,45 +1108,47 @@ class BrowserWindow(QMainWindow):
         card.setStyleSheet(
             """
             QFrame#googleVaultCard {
-                background-color: rgba(34, 33, 44, 246);
-                border: 1px solid rgba(255, 255, 255, 0.16);
-                border-radius: 14px;
-                color: #f0f0f5;
-                font-family: "Inter", "Segoe UI", "Ubuntu", sans-serif;
+                background-color: rgba(43, 42, 51, 250);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 12px;
+                color: #fbfbfe;
+                font-family: "Cantarell", "Noto Sans", "Ubuntu", "Segoe UI", sans-serif;
             }
             QFrame#googleBanner {
                 background-color: rgba(66, 133, 244, 0.22);
-                border: 1px solid rgba(110, 170, 255, 0.30);
-                border-radius: 12px;
+                border: 1px solid rgba(110, 170, 255, 0.28);
+                border-radius: 10px;
             }
             QPushButton#googlePrimaryBtn {
-                background-color: #3b82f6;
+                background-color: #0060df;
                 color: #ffffff;
                 border: none;
-                border-radius: 14px;
-                padding: 7px 14px;
+                border-radius: 6px;
+                padding: 6px 14px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 12.5px;
             }
-            QPushButton#googlePrimaryBtn:hover { background-color: #2563eb; }
+            QPushButton#googlePrimaryBtn:hover { background-color: #0250bb; }
             QPushButton#googleRowBtn {
                 background: transparent;
-                color: #eaeaf2;
+                color: #fbfbfe;
                 border: none;
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: 7px 10px;
                 text-align: left;
-                font-size: 12.5px;
+                font-size: 13px;
+                font-weight: 400;
             }
-            QPushButton#googleRowBtn:hover { background-color: rgba(255, 255, 255, 0.09); }
+            QPushButton#googleRowBtn:hover { background-color: rgba(255, 255, 255, 0.10); }
             QPushButton#googleDangerBtn {
                 background: transparent;
-                color: #fca5a5;
+                color: #ffb4b4;
                 border: none;
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: 7px 10px;
                 text-align: left;
-                font-size: 12.5px;
+                font-size: 13px;
+                font-weight: 400;
             }
             QPushButton#googleDangerBtn:hover { background-color: rgba(239, 68, 68, 0.16); }
             """
@@ -1199,10 +1201,10 @@ class BrowserWindow(QMainWindow):
         root.addWidget(sec1)
 
         for icon_txt, url in (
-            ("✉   Gmail (aislado)", "https://mail.google.com"),
-            ("▲   Google Drive (aislado)", "https://drive.google.com"),
-            ("📅   Google Calendar (aislado)", "https://calendar.google.com"),
-            ("▶   YouTube (en bóveda)", "https://www.youtube.com"),
+            ("Gmail (aislado)", "https://mail.google.com"),
+            ("Google Drive (aislado)", "https://drive.google.com"),
+            ("Google Calendar (aislado)", "https://calendar.google.com"),
+            ("YouTube (en bóveda)", "https://www.youtube.com"),
         ):
             row = QPushButton(icon_txt)
             row.setObjectName("googleRowBtn")
@@ -1215,14 +1217,14 @@ class BrowserWindow(QMainWindow):
         root.addWidget(sep)
 
         sec2 = QLabel("Herramientas de privacidad")
-        sec2.setStyleSheet("color: rgba(210, 210, 225, 150); font-size: 11px; font-weight: 600; padding: 2px 6px 0 6px;")
+        sec2.setStyleSheet("color: rgba(210, 210, 225, 160); font-size: 11.5px; font-weight: 600; padding: 2px 6px 0 6px;")
         root.addWidget(sec2)
 
-        shield_info = QLabel("🛡  Cerco activo: los enlaces externos se abren\n      en pestaña limpia sin tus cookies de Google.")
-        shield_info.setStyleSheet("color: rgba(220, 224, 240, 195); font-size: 11.5px; padding: 4px 10px;")
+        shield_info = QLabel("Cerco activo: los enlaces externos se abren\nen pestaña limpia sin tus cookies de Google.")
+        shield_info.setStyleSheet("color: rgba(220, 224, 240, 200); font-size: 12px; padding: 4px 10px;")
         root.addWidget(shield_info)
 
-        wipe_btn = QPushButton("🗑   Cerrar sesión y borrar Bóveda Google")
+        wipe_btn = QPushButton("Cerrar sesión y borrar Bóveda Google")
         wipe_btn.setObjectName("googleDangerBtn")
         wipe_btn.clicked.connect(lambda: (popup.close(), self._wipe_google_vault()))
         root.addWidget(wipe_btn)
@@ -2876,53 +2878,53 @@ class BrowserWindow(QMainWindow):
         card.setStyleSheet(
             """
             QFrame#netlisMainMenu {
-                background-color: rgba(30, 29, 40, 248);
-                border: 1px solid rgba(255, 255, 255, 0.16);
-                border-radius: 16px;
-                color: #f0f0f5;
-                font-family: "Inter", "Segoe UI", "Ubuntu", sans-serif;
+                background-color: rgba(43, 42, 51, 250);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 12px;
+                color: #fbfbfe;
+                font-family: "Cantarell", "Noto Sans", "Ubuntu", "Segoe UI", sans-serif;
             }
             QFrame#menuAccountBanner {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 rgba(78, 94, 210, 0.36), stop:1 rgba(59, 130, 246, 0.24));
-                border: 1px solid rgba(130, 155, 255, 0.34);
-                border-radius: 13px;
+                background-color: rgba(82, 92, 190, 0.34);
+                border: 1px solid rgba(130, 145, 255, 0.28);
+                border-radius: 10px;
             }
             QPushButton#menuRow {
                 background: transparent;
-                color: #eaeaf2;
+                color: #fbfbfe;
                 border: none;
-                border-radius: 9px;
-                padding: 7px 10px;
+                border-radius: 6px;
+                padding: 5px 10px;
                 text-align: left;
-                font-size: 12.5px;
+                font-size: 13px;
+                font-weight: 400;
             }
             QPushButton#menuRow:hover { background-color: rgba(255, 255, 255, 0.10); }
             QPushButton#menuRow:disabled { color: rgba(200, 200, 215, 95); }
             QPushButton#menuZoomBtn {
                 background: rgba(255, 255, 255, 0.08);
-                color: #f0f0f5;
-                border: 1px solid rgba(255, 255, 255, 0.14);
-                border-radius: 8px;
+                color: #fbfbfe;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 6px;
                 min-width: 26px;
                 max-width: 26px;
                 min-height: 24px;
                 max-height: 24px;
                 font-weight: 600;
-                font-size: 12.5px;
+                font-size: 13px;
             }
             QPushButton#menuZoomBtn:hover { background-color: rgba(255, 255, 255, 0.18); }
             QPushButton#menuZoomPct {
-                background: rgba(255, 255, 255, 0.05);
-                color: #e2e8f0;
-                border: 1px solid rgba(255, 255, 255, 0.10);
-                border-radius: 8px;
-                padding: 2px 8px;
+                background: transparent;
+                color: #fbfbfe;
+                border: none;
+                border-radius: 6px;
+                padding: 2px 6px;
                 min-width: 44px;
-                font-size: 11.5px;
-                font-weight: 600;
+                font-size: 13px;
+                font-weight: 400;
             }
-            QPushButton#menuZoomPct:hover { background-color: rgba(255, 255, 255, 0.14); }
+            QPushButton#menuZoomPct:hover { background-color: rgba(255, 255, 255, 0.10); }
             """
         )
         outer_lay.addWidget(card)
@@ -2975,49 +2977,48 @@ class BrowserWindow(QMainWindow):
             btn.setObjectName("menuRow")
             btn.setEnabled(enabled)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setMinimumHeight(30)
+            btn.setMinimumHeight(28)
             r_lay = QHBoxLayout(btn)
-            r_lay.setContentsMargins(10, 4, 10, 4)
+            r_lay.setContentsMargins(10, 3, 10, 3)
             r_lay.setSpacing(8)
             lbl_w = QLabel(label)
             lbl_w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             lbl_w.setStyleSheet(
-                f"color: {'#eaeaf2' if enabled else 'rgba(200,200,215,95)'}; font-size: 12.5px; background: transparent;"
+                f"color: {'#fbfbfe' if enabled else 'rgba(200,200,215,95)'}; "
+                "font-size: 13px; font-weight: 400; background: transparent;"
             )
             r_lay.addWidget(lbl_w, 1)
             if shortcut:
                 sc = QLabel(shortcut)
                 sc.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
                 sc.setStyleSheet(
-                    "color: rgba(210, 214, 235, 165); font-size: 11px; "
-                    "background: rgba(255, 255, 255, 0.06); border-radius: 5px; padding: 1px 6px;"
+                    "color: rgba(207, 207, 216, 175); font-size: 12px; font-weight: 400; background: transparent;"
                 )
                 r_lay.addWidget(sc)
             btn.clicked.connect(lambda: (popup.close(), cb()))
             root.addWidget(btn)
 
-        _add_row("＋  Nueva pestaña", lambda: self.add_new_tab(None, "Inicio"), "Ctrl+T")
-        _add_row("⧉  Pestaña contenedor aislado", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
-        _add_row("↺  Reabrir pestaña cerrada", self._reopen_closed_tab, "Ctrl+Shift+T", enabled=bool(self._closed_tabs))
-        _add_row("🕶  Nueva ventana privada", self.open_incognito_window, "Ctrl+Shift+N")
+        _add_row("Nueva pestaña", lambda: self.add_new_tab(None, "Inicio"), "Ctrl+T")
+        _add_row("Pestaña contenedor aislado", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
+        _add_row("Reabrir pestaña cerrada", self._reopen_closed_tab, "Ctrl+Mayús.+T", enabled=bool(self._closed_tabs))
+        _add_row("Nueva ventana privada", self.open_incognito_window, "Ctrl+Mayús.+N")
         _add_sep()
 
-        _add_row("🕘  Historial y limpieza", self._show_history, "Ctrl+H")
-        _add_row("↓   Descargas", self._show_downloads, "Ctrl+J")
-        vault_tag = "Abierta" if self.pass_vault.is_unlocked() else "Cifrada"
-        _add_row("🔑  Contraseñas (Bóveda local)", self._show_password_vault, vault_tag)
-        _add_row("🧩  Extensiones y plugins", self._show_plugin_store)
+        _add_row("Historial", self._show_history, "Ctrl+H")
+        _add_row("Descargas", self._show_downloads, "Ctrl+J")
+        _add_row("Contraseñas", self._show_password_vault)
+        _add_row("Extensiones y plugins", self._show_plugin_store)
         _add_sep()
 
-        _add_row("🔍  Buscar en la página", self._open_find_bar, "Ctrl+F")
+        _add_row("Buscar en la página", self._open_find_bar, "Ctrl+F")
 
         # Fila inline de Tamaño / Zoom (estilo Firefox, clic en % resetea a 100%)
         zoom_row = QWidget()
         z_lay = QHBoxLayout(zoom_row)
-        z_lay.setContentsMargins(10, 4, 8, 4)
+        z_lay.setContentsMargins(10, 3, 8, 3)
         z_lay.setSpacing(6)
-        z_lbl = QLabel("🔎  Tamaño")
-        z_lbl.setStyleSheet("color: #eaeaf2; font-size: 12.5px; background: transparent;")
+        z_lbl = QLabel("Tamaño")
+        z_lbl.setStyleSheet("color: #fbfbfe; font-size: 13px; font-weight: 400; background: transparent;")
         z_lay.addWidget(z_lbl, 1)
 
         view = self._current_view()
@@ -3053,12 +3054,12 @@ class BrowserWindow(QMainWindow):
         root.addWidget(zoom_row)
         _add_sep()
 
-        _add_row("🛡  Ajustes y Centro de Seguridad", self._show_privacy_center)
-        _add_row("🎨  Apariencia y transparencia", self._show_appearance)
+        _add_row("Ajustes", self._show_privacy_center)
+        _add_row("Apariencia", self._show_appearance)
         if is_gecko_available():
-            _add_row("🦊  Motor Firefox C++ (Huella TLS)", self._open_gecko_session)
+            _add_row("Motor Firefox C++", self._open_gecko_session)
         _add_sep()
-        _add_row("⏻  Salir", self.close, "Ctrl+Q")
+        _add_row("Salir", self.close, "Ctrl+Q")
 
         popup.adjustSize()
         pos = self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomRight())
