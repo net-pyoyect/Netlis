@@ -2876,27 +2876,28 @@ class BrowserWindow(QMainWindow):
         card.setStyleSheet(
             """
             QFrame#netlisMainMenu {
-                background-color: rgba(34, 33, 44, 246);
+                background-color: rgba(30, 29, 40, 248);
                 border: 1px solid rgba(255, 255, 255, 0.16);
-                border-radius: 14px;
+                border-radius: 16px;
                 color: #f0f0f5;
                 font-family: "Inter", "Segoe UI", "Ubuntu", sans-serif;
             }
             QFrame#menuAccountBanner {
-                background-color: rgba(82, 92, 190, 0.32);
-                border: 1px solid rgba(130, 145, 255, 0.30);
-                border-radius: 12px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(78, 94, 210, 0.36), stop:1 rgba(59, 130, 246, 0.24));
+                border: 1px solid rgba(130, 155, 255, 0.34);
+                border-radius: 13px;
             }
             QPushButton#menuRow {
                 background: transparent;
                 color: #eaeaf2;
                 border: none;
-                border-radius: 8px;
-                padding: 6px 10px;
+                border-radius: 9px;
+                padding: 7px 10px;
                 text-align: left;
                 font-size: 12.5px;
             }
-            QPushButton#menuRow:hover { background-color: rgba(255, 255, 255, 0.09); }
+            QPushButton#menuRow:hover { background-color: rgba(255, 255, 255, 0.10); }
             QPushButton#menuRow:disabled { color: rgba(200, 200, 215, 95); }
             QPushButton#menuZoomBtn {
                 background: rgba(255, 255, 255, 0.08);
@@ -2911,6 +2912,17 @@ class BrowserWindow(QMainWindow):
                 font-size: 12.5px;
             }
             QPushButton#menuZoomBtn:hover { background-color: rgba(255, 255, 255, 0.18); }
+            QPushButton#menuZoomPct {
+                background: rgba(255, 255, 255, 0.05);
+                color: #e2e8f0;
+                border: 1px solid rgba(255, 255, 255, 0.10);
+                border-radius: 8px;
+                padding: 2px 8px;
+                min-width: 44px;
+                font-size: 11.5px;
+                font-weight: 600;
+            }
+            QPushButton#menuZoomPct:hover { background-color: rgba(255, 255, 255, 0.14); }
             """
         )
         outer_lay.addWidget(card)
@@ -2959,65 +2971,80 @@ class BrowserWindow(QMainWindow):
             root.addWidget(s)
 
         def _add_row(label: str, cb, shortcut: str = "", enabled: bool = True) -> None:
-            row_w = QWidget()
-            r_lay = QHBoxLayout(row_w)
-            r_lay.setContentsMargins(0, 0, 6, 0)
-            r_lay.setSpacing(4)
-            btn = QPushButton(label)
+            btn = QPushButton()
             btn.setObjectName("menuRow")
             btn.setEnabled(enabled)
-            btn.clicked.connect(lambda: (popup.close(), cb()))
-            r_lay.addWidget(btn, 1)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setMinimumHeight(30)
+            r_lay = QHBoxLayout(btn)
+            r_lay.setContentsMargins(10, 4, 10, 4)
+            r_lay.setSpacing(8)
+            lbl_w = QLabel(label)
+            lbl_w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            lbl_w.setStyleSheet(
+                f"color: {'#eaeaf2' if enabled else 'rgba(200,200,215,95)'}; font-size: 12.5px; background: transparent;"
+            )
+            r_lay.addWidget(lbl_w, 1)
             if shortcut:
                 sc = QLabel(shortcut)
-                sc.setStyleSheet("color: rgba(200, 200, 220, 145); font-size: 11px; background: transparent;")
+                sc.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+                sc.setStyleSheet(
+                    "color: rgba(210, 214, 235, 165); font-size: 11px; "
+                    "background: rgba(255, 255, 255, 0.06); border-radius: 5px; padding: 1px 6px;"
+                )
                 r_lay.addWidget(sc)
-            root.addWidget(row_w)
+            btn.clicked.connect(lambda: (popup.close(), cb()))
+            root.addWidget(btn)
 
-        _add_row("Nueva pestaña", lambda: self.add_new_tab(None, "Inicio"), "Ctrl+T")
-        _add_row("Pestaña contenedor aislado", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
-        _add_row("Reabrir pestaña cerrada", self._reopen_closed_tab, "Ctrl+Shift+T", enabled=bool(self._closed_tabs))
-        _add_row("Nueva ventana privada", self.open_incognito_window, "Ctrl+Shift+N")
+        _add_row("＋  Nueva pestaña", lambda: self.add_new_tab(None, "Inicio"), "Ctrl+T")
+        _add_row("⧉  Pestaña contenedor aislado", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
+        _add_row("↺  Reabrir pestaña cerrada", self._reopen_closed_tab, "Ctrl+Shift+T", enabled=bool(self._closed_tabs))
+        _add_row("🕶  Nueva ventana privada", self.open_incognito_window, "Ctrl+Shift+N")
         _add_sep()
 
-        _add_row("Historial y limpieza", self._show_history, "Ctrl+H")
-        _add_row("Descargas", self._show_downloads, "Ctrl+J")
-        _add_row("🔑  Contraseñas (Bóveda local)", self._show_password_vault)
-        _add_row("Extensiones y plugins", self._show_plugin_store)
+        _add_row("🕘  Historial y limpieza", self._show_history, "Ctrl+H")
+        _add_row("↓   Descargas", self._show_downloads, "Ctrl+J")
+        vault_tag = "Abierta" if self.pass_vault.is_unlocked() else "Cifrada"
+        _add_row("🔑  Contraseñas (Bóveda local)", self._show_password_vault, vault_tag)
+        _add_row("🧩  Extensiones y plugins", self._show_plugin_store)
         _add_sep()
 
-        _add_row("Buscar en la página", self._open_find_bar, "Ctrl+F")
+        _add_row("🔍  Buscar en la página", self._open_find_bar, "Ctrl+F")
 
-        # Fila inline de Tamaño / Zoom (estilo Firefox)
+        # Fila inline de Tamaño / Zoom (estilo Firefox, clic en % resetea a 100%)
         zoom_row = QWidget()
         z_lay = QHBoxLayout(zoom_row)
         z_lay.setContentsMargins(10, 4, 8, 4)
         z_lay.setSpacing(6)
-        z_lbl = QLabel("Tamaño")
+        z_lbl = QLabel("🔎  Tamaño")
         z_lbl.setStyleSheet("color: #eaeaf2; font-size: 12.5px; background: transparent;")
         z_lay.addWidget(z_lbl, 1)
 
         view = self._current_view()
         cur_zoom = int(round((view.zoomFactor() if view else 1.0) * 100))
-        z_pct = QLabel(f"{cur_zoom}%")
-        z_pct.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        z_pct.setMinimumWidth(42)
-        z_pct.setStyleSheet("color: #e2e8f0; font-size: 12px; font-weight: 600; background: transparent;")
+        z_pct = QPushButton(f"{cur_zoom}%")
+        z_pct.setObjectName("menuZoomPct")
+        z_pct.setToolTip("Restablecer zoom al 100%")
+        z_pct.setCursor(Qt.CursorShape.PointingHandCursor)
 
         def _zoom_step(delta: float | None) -> None:
             self._adjust_zoom(delta)
             v2 = self._current_view()
             z_pct.setText(f"{int(round((v2.zoomFactor() if v2 else 1.0) * 100))}%")
 
+        z_pct.clicked.connect(lambda: _zoom_step(None))
         z_minus = QPushButton("−")
         z_minus.setObjectName("menuZoomBtn")
+        z_minus.setCursor(Qt.CursorShape.PointingHandCursor)
         z_minus.clicked.connect(lambda: _zoom_step(-0.1))
         z_plus = QPushButton("+")
         z_plus.setObjectName("menuZoomBtn")
+        z_plus.setCursor(Qt.CursorShape.PointingHandCursor)
         z_plus.clicked.connect(lambda: _zoom_step(0.1))
         z_fs = QPushButton("⛶")
         z_fs.setObjectName("menuZoomBtn")
         z_fs.setToolTip("Pantalla completa (F11)")
+        z_fs.setCursor(Qt.CursorShape.PointingHandCursor)
         z_fs.clicked.connect(lambda: (popup.close(), self._toggle_window_fullscreen()))
         z_lay.addWidget(z_minus)
         z_lay.addWidget(z_pct)
@@ -3026,12 +3053,12 @@ class BrowserWindow(QMainWindow):
         root.addWidget(zoom_row)
         _add_sep()
 
-        _add_row("Ajustes y Centro de Seguridad", self._show_privacy_center)
-        _add_row("Apariencia y transparencia", self._show_appearance)
+        _add_row("🛡  Ajustes y Centro de Seguridad", self._show_privacy_center)
+        _add_row("🎨  Apariencia y transparencia", self._show_appearance)
         if is_gecko_available():
-            _add_row("Motor Firefox C++ (Huella TLS)", self._open_gecko_session)
+            _add_row("🦊  Motor Firefox C++ (Huella TLS)", self._open_gecko_session)
         _add_sep()
-        _add_row("Salir", self.close, "Ctrl+Q")
+        _add_row("⏻  Salir", self.close, "Ctrl+Q")
 
         popup.adjustSize()
         pos = self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomRight())
