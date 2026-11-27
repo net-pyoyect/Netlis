@@ -1180,7 +1180,8 @@ class BrowserWindow(QMainWindow):
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, False)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, False)
-        web_settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
+        is_google_vault = prof is self._google_vault_profile
+        web_settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, is_google_vault)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
@@ -1204,7 +1205,30 @@ class BrowserWindow(QMainWindow):
         for s in old:
             scripts.remove(s)
 
-        if self.settings.anti_fingerprinting:
+        if is_google_vault:
+            web_settings.setAttribute(QWebEngineSettings.WebAttribute.WebRTCPublicInterfacesOnly, True)
+            prof.setHttpAcceptLanguage("es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7")
+            # User-Agent Firefox en Bóveda Google: evita el bloqueo "This browser or app may not be secure" de Google Sign-In
+            prof.setHttpUserAgent(
+                "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0"
+            )
+            ff_script = QWebEngineScript()
+            ff_script.setName("netlis_antifp")
+            ff_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+            ff_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+            ff_script.setRunsOnSubFrames(True)
+            ff_script.setSourceCode(
+                """
+                (() => {
+                    try {
+                        Object.defineProperty(navigator, 'webdriver', { get: () => false });
+                        Object.defineProperty(navigator, 'userAgentData', { get: () => undefined });
+                    } catch (e) {}
+                })();
+                """
+            )
+            scripts.insert(ff_script)
+        elif self.settings.anti_fingerprinting:
             web_settings.setAttribute(QWebEngineSettings.WebAttribute.WebRTCPublicInterfacesOnly, True)
             prof.setHttpAcceptLanguage("en-US,en;q=0.9")
             try:

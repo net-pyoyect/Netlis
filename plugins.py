@@ -241,8 +241,9 @@ BUILTIN_PLUGINS: tuple[PluginDefinition, ...] = (
                 try { Object.defineProperty(window, 'devicePixelRatio', { get: () => 1 }); } catch (e) {}
                 try { Object.defineProperty(navigator, 'platform', { get: () => 'Linux x86_64' }); } catch (e) {}
                 if (navigator.userAgentData) {
+                    const _isFf = navigator.userAgent.includes('Firefox/');
                     Object.defineProperty(navigator, 'userAgentData', {
-                        get: () => ({
+                        get: () => _isFf ? undefined : ({
                             brands: [{ brand: 'Chromium', version: '140' }],
                             mobile: false,
                             platform: 'Linux',
