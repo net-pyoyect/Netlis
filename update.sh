@@ -21,7 +21,7 @@ fi
 echo "[*] Actualizando dependencias Python..."
 .venv/bin/pip install -q -r requirements.txt
 
-chmod +x launch.sh install.sh install_desktop.sh update.sh release.py 2>/dev/null || true
+chmod +x launch.sh install.sh install_desktop.sh update.sh doctor.sh release.py 2>/dev/null || true
 ./install_desktop.sh
 
 echo ""
