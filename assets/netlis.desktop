@@ -10,7 +10,7 @@ Terminal=false
 Categories=Network;WebBrowser;Security;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
 StartupNotify=true
-StartupWMClass=browser.py
+StartupWMClass=netlis
 Actions=new-private-window;
 
 [Desktop Action new-private-window]

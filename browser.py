@@ -2778,6 +2778,9 @@ def main() -> int:
     apply_qt_network_proxy(settings)
 
     app = QApplication([sys.argv[0], *chromium_flags, *qt_args])
+    app.setApplicationName("netlis")
+    app.setApplicationDisplayName("Netlis")
+    app.setDesktopFileName("netlis")
     window = BrowserWindow(incognito=args.incognito, settings=settings, appearance=appearance)
     if not window._netlis_icon.isNull():
         app.setWindowIcon(window._netlis_icon)
