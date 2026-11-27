@@ -1,0 +1,58 @@
+name: Build Netlis Windows (.exe)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pillow
+
+      - name: Generate Windows .ico from Netlis logo
+        run: |
+          python -c "from PIL import Image; img = Image.open('assets/netlis_logo_transparent.png').convert('RGBA'); img.save('assets/netlis.ico', sizes=[(256,256),(128,128),(64,64),(48,48),(32,32),(16,16)])"
+
+      - name: Build Netlis.exe (onedir)
+        run: |
+          pyinstaller --noconfirm --clean --windowed `
+            --name Netlis `
+            --icon assets/netlis.ico `
+            --add-data "assets;assets" `
+            --collect-all PyQt6.QtWebEngineWidgets `
+            --collect-all PyQt6.QtWebEngineCore `
+            browser.py
+
+      - name: Package Netlis-Windows.zip
+        run: |
+          Compress-Archive -Path dist\Netlis\* -DestinationPath Netlis-Windows.zip -Force
+
+      - name: Upload Netlis-Windows.zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Netlis-Windows
+          path: Netlis-Windows.zip
+
+      - name: Attach to GitHub Release on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Netlis-Windows.zip
