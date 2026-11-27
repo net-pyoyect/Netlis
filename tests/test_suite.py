@@ -35,7 +35,7 @@ class TestNetlisCoreSecurity(unittest.TestCase):
         joined = " ".join(flags)
         self.assertIn("--site-per-process", flags)
         self.assertNotIn("--jitless", joined)
-        self.assertIn("--max-old-space-size=512", joined)
+        self.assertIn("--max-old-space-size=384", joined)
         self.assertNotIn("--renderer-process-limit", joined)
         feat_flags = [f for f in flags if f.startswith("--enable-features=")]
         self.assertEqual(len(feat_flags), 1, "Debe existir un único --enable-features unificado")
