@@ -725,6 +725,17 @@ class SecureWebPage(QWebEnginePage):
         self.browser_win = browser_win
         self.featurePermissionRequested.connect(self._handle_feature_permission)
 
+    def certificateError(self, error) -> bool:
+        """Rechaza estrictamente certificados TLS inválidos, caducados o MITM."""
+        try:
+            error.rejectCertificate()
+        except Exception:
+            pass
+        if self.browser_win is not None:
+            host = error.url().host() if hasattr(error, "url") else ""
+            self.browser_win.interceptor._mark_blocked(host, f"TLS inválido ({host})")
+        return False
+
     def _handle_feature_permission(self, security_origin: QUrl, feature: QWebEnginePage.Feature) -> None:
         media_labels = {
             QWebEnginePage.Feature.MediaAudioCapture: "el micrófono",
@@ -809,6 +820,15 @@ class SecureWebPage(QWebEnginePage):
 
         scheme = url.scheme().lower()
         if scheme in ("javascript", "vbscript", "file"):
+            return False
+        if (
+            scheme == "data"
+            and is_main_frame
+            and nav_type in (
+                QWebEnginePage.NavigationType.NavigationTypeLinkClicked,
+                QWebEnginePage.NavigationType.NavigationTypeRedirect,
+            )
+        ):
             return False
 
         # Cerco estricto de Bóveda Google: cualquier enlace externo sale a una pestaña normal limpia (sin cookies de Google)
@@ -1237,6 +1257,9 @@ class BrowserWindow(QMainWindow):
         is_google_vault = prof is self._google_vault_profile
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, is_google_vault)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+        web_settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanPaste, False)
+        web_settings.setAttribute(QWebEngineSettings.WebAttribute.AllowGeolocationOnInsecureOrigins, False)
+        web_settings.setAttribute(QWebEngineSettings.WebAttribute.ScreenCaptureEnabled, True)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, False)
         web_settings.setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
 

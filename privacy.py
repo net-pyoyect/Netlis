@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import ipaddress
 from pathlib import Path
 import random
 import socket
@@ -361,6 +362,19 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
         self.per_site_blocked.clear()
         self.per_site_totals.clear()
 
+    @staticmethod
+    def _is_private_or_loopback_host(host: str) -> bool:
+        h = (host or "").lower().strip("[]").strip(".")
+        if not h:
+            return False
+        if h in ("localhost", "ip6-localhost", "ip6-loopback") or h.endswith(".local"):
+            return True
+        try:
+            ip = ipaddress.ip_address(h)
+            return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_unspecified
+        except ValueError:
+            return False
+
     def interceptRequest(self, info: QWebEngineUrlRequestInfo) -> None:
         url = info.requestUrl()
         scheme = url.scheme().lower()
@@ -369,6 +383,17 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
         query = url.query().lower()
         first_party = info.firstPartyUrl().host().lower()
         site_ctx = first_party or host
+
+        # Protección anti-SSRF / escaneo de red local: un sitio público no puede hacer peticiones a localhost/LAN
+        if (
+            first_party
+            and scheme in ("http", "https", "ws", "wss")
+            and not self._is_private_or_loopback_host(first_party)
+            and self._is_private_or_loopback_host(host)
+        ):
+            info.block(True)
+            self._mark_blocked(site_ctx, f"Anti-SSRF ({host})")
+            return
 
         spy_guard_on = self.anti_spy_enabled() if self.anti_spy_enabled is not None else False
 
