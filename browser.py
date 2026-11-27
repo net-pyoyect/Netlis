@@ -1234,7 +1234,7 @@ class BrowserWindow(QMainWindow):
         popup.show()
 
     def _show_password_vault(self) -> None:
-        from PyQt6.QtWidgets import QDialog, QInputDialog, QListWidget
+        from PyQt6.QtWidgets import QFrame, QInputDialog, QListWidget
 
         if not self.pass_vault.exists():
             pw1, ok1 = QInputDialog.getText(
@@ -1303,31 +1303,111 @@ class BrowserWindow(QMainWindow):
         info_lbl.setStyleSheet("color: #93c5fd; font-size: 12px; background: transparent;")
         lay.addWidget(info_lbl)
 
+        search_in = QLineEdit()
+        search_in.setPlaceholderText("🔍  Buscar por dominio o usuario...")
+        search_in.setStyleSheet(
+            "background: rgba(255,255,255,0.06); color: #f0f0f5; border: 1px solid rgba(255,255,255,0.14); "
+            "border-radius: 12px; padding: 8px 12px; font-size: 12.5px;"
+        )
+        lay.addWidget(search_in)
+
         list_w = QListWidget()
+        list_w.setStyleSheet(
+            """
+            QListWidget {
+                background: rgba(18, 17, 26, 175);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 14px;
+                padding: 6px;
+                color: #f0f0f5;
+                font-size: 12.5px;
+            }
+            QListWidget::item {
+                padding: 9px 12px;
+                margin: 2px 0;
+                border-radius: 10px;
+            }
+            QListWidget::item:hover { background: rgba(255, 255, 255, 0.08); }
+            QListWidget::item:selected {
+                background: rgba(59, 130, 246, 0.34);
+                border: 1px solid rgba(96, 165, 250, 0.45);
+                color: #ffffff;
+            }
+            """
+        )
         lay.addWidget(list_w, 1)
+
+        def _filtered_entries() -> list:
+            q = search_in.text().strip().lower()
+            items = self.pass_vault.entries()
+            if q:
+                items = [e for e in items if q in e.domain.lower() or q in e.username.lower()]
+            items.sort(key=lambda e: (0 if cur_host and normalize_domain(e.domain) == cur_host else 1, e.domain, e.username))
+            return items
 
         def _refresh_list() -> None:
             list_w.clear()
-            all_items = self.pass_vault.entries()
-            all_items.sort(key=lambda e: (0 if cur_host and normalize_domain(e.domain) == cur_host else 1, e.domain, e.username))
-            for e in all_items:
-                tag = "★ " if cur_host and normalize_domain(e.domain) == cur_host else ""
-                list_w.addItem(f"{tag}{e.domain}  —  {e.username}")
+            for e in _filtered_entries():
+                tag = "★  " if cur_host and normalize_domain(e.domain) == cur_host else "🔑  "
+                list_w.addItem(f"{tag}{e.domain}   •   {e.username}")
+            if list_w.count() > 0:
+                list_w.setCurrentRow(0)
 
+        search_in.textChanged.connect(lambda _t: _refresh_list())
         _refresh_list()
 
-        form_row = QHBoxLayout()
+        form_card = QFrame()
+        form_card.setStyleSheet(
+            """
+            QFrame {
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 14px;
+            }
+            QLineEdit {
+                background: rgba(15, 14, 22, 180);
+                color: #f0f0f5;
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 10px;
+                padding: 7px 10px;
+                font-size: 12.5px;
+            }
+            """
+        )
+        form_lay = QVBoxLayout(form_card)
+        form_lay.setContentsMargins(12, 10, 12, 10)
+        form_lay.setSpacing(8)
+
+        row_top = QHBoxLayout()
         dom_in = QLineEdit(cur_host)
         dom_in.setPlaceholderText("Dominio (ej. github.com)")
         usr_in = QLineEdit()
         usr_in.setPlaceholderText("Usuario o correo")
+        row_top.addWidget(dom_in, 1)
+        row_top.addWidget(usr_in, 1)
+        form_lay.addLayout(row_top)
+
+        row_bot = QHBoxLayout()
         pwd_in = QLineEdit()
         pwd_in.setPlaceholderText("Contraseña")
         pwd_in.setEchoMode(QLineEdit.EchoMode.Password)
+        eye_btn = QPushButton("👁")
+        eye_btn.setToolTip("Mostrar / ocultar contraseña")
+        eye_btn.setFixedWidth(36)
+        eye_btn.clicked.connect(
+            lambda: pwd_in.setEchoMode(
+                QLineEdit.EchoMode.Normal if pwd_in.echoMode() == QLineEdit.EchoMode.Password else QLineEdit.EchoMode.Password
+            )
+        )
         gen_btn = QPushButton("🎲")
         gen_btn.setToolTip("Generar contraseña fuerte de 20 caracteres")
+        gen_btn.setFixedWidth(36)
         gen_btn.clicked.connect(lambda: (pwd_in.setText(generate_strong_password()), pwd_in.setEchoMode(QLineEdit.EchoMode.Normal)))
-        save_btn = QPushButton("Guardar")
+        save_btn = QPushButton("Guardar clave")
+        save_btn.setStyleSheet(
+            "QPushButton { background: #3b82f6; color: #ffffff; border: none; border-radius: 10px; padding: 7px 14px; font-weight: 600; } "
+            "QPushButton:hover { background: #2563eb; }"
+        )
 
         def _on_save() -> None:
             try:
@@ -1339,12 +1419,18 @@ class BrowserWindow(QMainWindow):
                 QMessageBox.warning(dlg, "Bóveda", str(exc))
 
         save_btn.clicked.connect(_on_save)
-        for w_item in (dom_in, usr_in, pwd_in, gen_btn, save_btn):
-            form_row.addWidget(w_item)
-        lay.addLayout(form_row)
+        for w_item in (pwd_in, eye_btn, gen_btn, save_btn):
+            row_bot.addWidget(w_item)
+        row_bot.setStretch(0, 1)
+        form_lay.addLayout(row_bot)
+        lay.addWidget(form_card)
 
         act_row = QHBoxLayout()
-        fill_btn = QPushButton("Rellenar en esta página")
+        fill_btn = QPushButton("✨ Rellenar aquí")
+        fill_btn.setStyleSheet(
+            "QPushButton { background: #3b82f6; color: #ffffff; border: none; border-radius: 11px; padding: 8px 14px; font-weight: 600; } "
+            "QPushButton:hover { background: #2563eb; }"
+        )
         cp_user_btn = QPushButton("Copiar usuario")
         cp_pwd_btn = QPushButton("Copiar clave")
         del_btn = QPushButton("Eliminar")
@@ -1352,8 +1438,7 @@ class BrowserWindow(QMainWindow):
 
         def _selected_entry():
             idx = list_w.currentRow()
-            items = self.pass_vault.entries()
-            items.sort(key=lambda e: (0 if cur_host and normalize_domain(e.domain) == cur_host else 1, e.domain, e.username))
+            items = _filtered_entries()
             if 0 <= idx < len(items):
                 return items[idx]
             return None
