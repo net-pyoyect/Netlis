@@ -127,36 +127,43 @@ def run_doctor(auto_fix: bool = False) -> int:
 
     # 2. Librerías del sistema y fuentes (Qt6 / WebEngine / Fontconfig)
     print("\n[2/6] Verificando librerías gráficas (Qt6/XCB) y fuentes...")
-    missing_sys: list[str] = []
-    for lib_name, pkg_hint in (
-        ("libxcb-cursor.so.0", "libxcb-cursor0"),
-        ("libnss3.so", "libnss3"),
-        ("libEGL.so.1", "libegl1"),
-        ("libxkbcommon.so.0", "libxkbcommon0"),
-    ):
-        if _has_ldconfig_lib(lib_name):
-            _ok(f"Librería presente: {lib_name}")
-        else:
-            _err(f"Falta librería del sistema: {lib_name} (paquete {pkg_hint})")
-            missing_sys.append(pkg_hint)
-
-    if any(Path(d).is_dir() for d in FONT_DIRS):
-        _ok("Fuentes del sistema encontradas (sin riesgo de cuadritos □□□□)")
+    if sys.platform == "win32":
+        _ok("Sistema Windows detectado (Qt6 usa librerías nativas de Windows)")
     else:
-        _err("No se encontraron fuentes Liberation/Noto/DejaVu (las letras saldrían como □□□□)")
-        missing_sys.append("fonts-liberation")
+        missing_sys: list[str] = []
+        for lib_name, pkg_hint in (
+            ("libxcb-cursor.so.0", "libxcb-cursor0"),
+            ("libnss3.so", "libnss3"),
+            ("libEGL.so.1", "libegl1"),
+            ("libxkbcommon.so.0", "libxkbcommon0"),
+        ):
+            if _has_ldconfig_lib(lib_name):
+                _ok(f"Librería presente: {lib_name}")
+            else:
+                _err(f"Falta librería del sistema: {lib_name} (paquete {pkg_hint})")
+                missing_sys.append(pkg_hint)
 
-    if missing_sys:
-        if _install_system_packages(auto_fix):
-            _fix("Dependencias del sistema instaladas")
-            fixed += 1
+        if any(Path(d).is_dir() for d in FONT_DIRS):
+            _ok("Fuentes del sistema encontradas (sin riesgo de cuadritos □□□□)")
         else:
-            issues += len(missing_sys)
+            _err("No se encontraron fuentes Liberation/Noto/DejaVu (las letras saldrían como □□□□)")
+            missing_sys.append("fonts-liberation")
+
+        if missing_sys:
+            if _install_system_packages(auto_fix):
+                _fix("Dependencias del sistema instaladas")
+                fixed += 1
+            else:
+                issues += len(missing_sys)
 
     # 3. Entorno virtual .venv y PyQt6
     print("\n[3/6] Verificando entorno Python (.venv) y PyQt6-WebEngine...")
-    venv_py = ROOT / ".venv" / "bin" / "python3"
-    venv_pip = ROOT / ".venv" / "bin" / "pip"
+    if sys.platform == "win32":
+        venv_py = ROOT / ".venv" / "Scripts" / "python.exe"
+        venv_pip = ROOT / ".venv" / "Scripts" / "pip.exe"
+    else:
+        venv_py = ROOT / ".venv" / "bin" / "python3"
+        venv_pip = ROOT / ".venv" / "bin" / "pip"
     if not venv_py.is_file():
         _err("No existe .venv/bin/python3")
         _fix("Creando entorno virtual .venv e instalando requirements.txt...")

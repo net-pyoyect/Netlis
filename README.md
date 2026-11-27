@@ -57,12 +57,10 @@ chmod +x launch.sh install_desktop.sh && ./install_desktop.sh && ./launch.sh
 ### Windows 10 / 11
 
 ```powershell
-git clone https://github.com/net-pyoyect/Netlis.git netlis
-cd netlis
-python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-.\launch.bat
+git clone https://github.com/net-pyoyect/Netlis.git netlis && cd netlis && install.bat && launch.bat
 ```
+
+Para actualizar en Windows en 1 comando: `update.bat` (o `update.bat --launch`).
 
 > **Nota (Tor):** En Linux puedes instalar `tor` del sistema (`sudo pacman -S tor` / `sudo apt install tor`) o colocarlo en `.tor/`. En Windows, coloca el Tor Expert Bundle en `.tor\tor\tor.exe` o añade `tor.exe` al `PATH`.
 
