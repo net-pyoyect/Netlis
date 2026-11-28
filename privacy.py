@@ -286,23 +286,14 @@ def pick_random_region() -> tuple[str, str]:
 
 def rotate_tor_identity(control_port: int = 19051, region_code: str = "") -> tuple[bool, str]:
     """Cambia de región (opcional) y solicita nueva IP aleatoria al ControlPort de Tor integrado."""
-    try:
-        cmds = ['AUTHENTICATE ""']
-        if region_code == "auto":
-            cmds.append("RESETCONF ExitNodes StrictNodes")
-        elif region_code:
-            cmds.append(f'SETCONF ExitNodes="{{{region_code}}}" StrictNodes=1')
-        cmds.append("SIGNAL NEWNYM")
-        cmds.append("QUIT")
-        payload = ("\r\n".join(cmds) + "\r\n").encode("utf-8")
-        with socket.create_connection(("127.0.0.1", control_port), timeout=1.5) as sock:
-            sock.sendall(payload)
-            resp = sock.recv(512).decode("utf-8", errors="ignore")
-            if "250 OK" in resp:
-                return True, "Circuito Tor renovado con nueva IP de salida."
-            return False, f"Tor respondió: {resp.strip()}"
-    except OSError:
-        return False, "Túnel Tor iniciándose o apagado."
+    from tor_manager import NETLIS_DIR, authenticated_control
+    commands = []
+    if region_code == "auto":
+        commands.append("RESETCONF ExitNodes StrictNodes")
+    elif region_code:
+        commands.append(f'SETCONF ExitNodes="{{{region_code}}}" StrictNodes=1')
+    commands.append("SIGNAL NEWNYM")
+    return authenticated_control(NETLIS_DIR / "data" / "tor_consensus" / "control_auth_cookie", commands, control_port)
 
 
 TRACKER_DOMAINS_SET: frozenset[str] = frozenset(TRACKER_DOMAINS)
@@ -493,6 +484,9 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
         url = info.requestUrl()
         scheme = url.scheme().lower()
         host = url.host().lower()
+        if getattr(self, "network_paused", False) and scheme in ("http", "https", "ws", "wss"):
+            info.block(True)
+            return
         path = url.path().lower()
         query = url.query().lower()
         first_party = info.firstPartyUrl().host().lower()
@@ -511,11 +505,10 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
 
         spy_guard_on = self.anti_spy_enabled() if self.anti_spy_enabled is not None else False
 
-        # Kill-Switch estricto Anti-Espionaje: si Modo Tor está activo pero el túnel aún no levanta,
-        # no permitir que salga NI UN SOLO PAQUETE con tu IP real hacia internet.
+        # Bloquear solicitudes web si el proxy Tor no está disponible.
+        # Es obligatorio en modo Tor, independientemente del plugin anti-espionaje.
         if (
-            spy_guard_on
-            and self.settings.proxy_enabled
+            self.settings.proxy_enabled
             and scheme in ("http", "https", "ws", "wss")
             and host not in ("127.0.0.1", "localhost", "::1")
             and not self._is_tor_ready_cached()

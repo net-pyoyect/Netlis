@@ -68,6 +68,29 @@ CONTROL_PORT = 19051
 DEFAULT_TOR_PROXY = f"socks5://{SOCKS_HOST}:{SOCKS_PORT}"
 
 
+def authenticated_control(cookie_path: Path, commands, control_port: int = CONTROL_PORT) -> tuple[bool, str]:
+    """Authenticate using Tor's local cookie before sending any control command."""
+    try:
+        cookie = cookie_path.read_bytes()
+        if len(cookie) != 32:
+            return False, "Cookie de autenticación Tor inválida."
+        with socket.create_connection((SOCKS_HOST, control_port), timeout=1.5) as sock:
+            with sock.makefile("rb") as reply:
+                for command in [f"AUTHENTICATE {cookie.hex()}", *commands]:
+                    if "\r" in command or "\n" in command:
+                        return False, "Comando Tor inválido."
+                    sock.sendall((command + "\r\n").encode("utf-8"))
+                    while True:
+                        line = reply.readline(65536)
+                        if not line.startswith(b"250"):
+                            return False, "Tor rechazó la autenticación o el comando."
+                        if line[3:4] == b" ":
+                            break
+                return True, "Circuito Tor actualizado."
+    except OSError:
+        return False, "Tor no está listo o no se pudo autenticar."
+
+
 class EmbeddedTorManager:
     """Administra el proceso Tor local de Netlis sin requerir permisos root."""
 
@@ -100,7 +123,7 @@ class EmbeddedTorManager:
             f"DataDirectory {self.data_dir}",
             f"SocksPort {SOCKS_HOST}:{SOCKS_PORT} IsolateDestAddr IsolateDestPort",
             f"ControlPort {SOCKS_HOST}:{CONTROL_PORT}",
-            "CookieAuthentication 0",
+            "CookieAuthentication 1",
             "AvoidDiskWrites 1",
             "ClientOnly 1",
             "MaxMemInQueues 48 MB",
@@ -168,15 +191,7 @@ class EmbeddedTorManager:
         return self.control_cmd(f"SETCONF UseBridges=1 {bridge_args}", "SIGNAL NEWNYM")
 
     def control_cmd(self, *commands: str) -> tuple[bool, str]:
-        try:
-            with socket.create_connection((SOCKS_HOST, CONTROL_PORT), timeout=1.5) as sock:
-                payload = 'AUTHENTICATE ""\r\n' + "\r\n".join(commands) + "\r\nQUIT\r\n"
-                sock.sendall(payload.encode("utf-8"))
-                resp = sock.recv(1024).decode("utf-8", errors="ignore")
-                ok = "250 OK" in resp
-                return ok, resp.strip()
-        except OSError as exc:
-            return False, str(exc)
+        return authenticated_control(self.data_dir / "control_auth_cookie", commands)
 
     def set_exit_region(self, ip_region: str) -> tuple[bool, str]:
         if not ip_region or ip_region == "auto":
@@ -227,14 +242,20 @@ def fetch_text_via_socks5(
     socks_port: int = SOCKS_PORT,
     timeout: float = 14.0,
     max_redirects: int = 3,
+    https_only: bool = False,
 ) -> str:
     """Descarga texto HTTPS/HTTP pasando DNS y tráfico 100% por SOCKS5h (cero fuga de IP o DNS)."""
     from urllib.parse import urljoin, urlparse
 
     current = url_str
+    require_https = https_only or urlparse(url_str).scheme.lower() == "https"
     for _ in range(max_redirects + 1):
         parsed = urlparse(current)
         scheme = parsed.scheme.lower()
+        if require_https and scheme != "https":
+            raise ValueError("Se requiere HTTPS; redirección insegura bloqueada")
+        if scheme == "https":
+            require_https = True
         if scheme not in ("https", "http"):
             raise ValueError(f"Esquema no soportado: {scheme}")
         host = parsed.hostname or ""

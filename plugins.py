@@ -916,11 +916,11 @@ class PluginManager:
         """Descarga e instala un Userscript (.user.js / .js) desde una URL HTTPS (usando Tor si está activo)."""
         clean_url = url_str.strip()
         parsed = urlparse(clean_url)
-        if parsed.scheme.lower() not in ("https", "http") or not parsed.hostname:
+        if parsed.scheme.lower() != "https" or not parsed.hostname:
             return False, "Introduce una dirección https:// válida hacia un archivo .js o .user.js."
 
         try:
-            code = fetch_text_via_socks5(clean_url, socks_port=SOCKS_PORT, timeout=timeout)
+            code = fetch_text_via_socks5(clean_url, socks_port=SOCKS_PORT, timeout=timeout, https_only=True)
         except Exception as exc:
             return False, f"No se pudo descargar el script: {exc}"
 

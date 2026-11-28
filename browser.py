@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+from dataclasses import replace
 from datetime import datetime
 import html as html_lib
 import json
@@ -37,6 +38,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QMenu,
     QProgressBar,
     QPushButton,
@@ -77,6 +79,9 @@ from tor_manager import EmbeddedTorManager
 from updater import auto_refresh_threats_async
 
 TOR_ENGINE: EmbeddedTorManager | None = None
+_RESTART_REQUESTED = False
+_RESTART_TEMP_DIRS: set[Path] = set()
+_INITIAL_CHROMIUM_FLAGS = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS")
 
 NEWTAB_URL = "netlis://newtab"
 
@@ -1853,19 +1858,29 @@ class BrowserWindow(QMainWindow):
                     v.setUrl(qurl)
 
     def _toggle_turbo_mode(self) -> None:
-        global TOR_ENGINE
-        self.settings.proxy_enabled = not self.settings.proxy_enabled
-        self.settings.save(self.settings_path)
-        if self.settings.proxy_enabled:
-            if TOR_ENGINE is None:
-                TOR_ENGINE = EmbeddedTorManager(self.data_dir)
-            TOR_ENGINE.start_async(self.settings.ip_region, self.settings.tor_bridges_obfs4)
-        elif TOR_ENGINE is not None:
-            TOR_ENGINE.stop(wipe_files=False)
-        for prof in self._all_profiles():
-            prof.settings().setAttribute(QWebEngineSettings.WebAttribute.DnsPrefetchEnabled, not self.settings.proxy_enabled)
-        apply_qt_network_proxy(self.settings)
-        self._refresh_network_pill()
+        self._apply_privacy_settings(replace(self.settings, proxy_enabled=not self.settings.proxy_enabled))
+
+    def _restart_for_network_change(self, updated: PrivacySettings) -> None:
+        global _RESTART_REQUESTED
+        answer = QMessageBox.question(
+            self, "Reiniciar para cambiar la conexión",
+            "Cambiar entre Tor y conexión directa, o cambiar el proxy, requiere reiniciar Netlis. "
+            "Se cerrarán todas las pestañas y puedes perder formularios sin guardar. ¿Reiniciar ahora?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        updated.save(self.settings_path)
+        # Keep the active settings truthful until the old Chromium process exits.
+        _RESTART_REQUESTED = True
+        for window in list(self._open_windows):
+            window.interceptor.network_paused = True
+            _RESTART_TEMP_DIRS.update(window._ephemeral_dirs)
+        def finish_restart():
+            QApplication.closeAllWindows()
+            QApplication.quit()
+        QTimer.singleShot(0, finish_restart)
 
     def _bind_shortcuts(self) -> None:
         QShortcut(QKeySequence("Ctrl+T"), self, lambda: self.add_new_tab(None, "Inicio"))
@@ -3060,6 +3075,9 @@ class BrowserWindow(QMainWindow):
         self.url_bar.setText("netlis://settings")
 
     def _apply_privacy_settings(self, updated: PrivacySettings) -> None:
+        if (updated.proxy_enabled, updated.proxy_url) != (self.settings.proxy_enabled, self.settings.proxy_url):
+            self._restart_for_network_change(updated)
+            return
         self.settings = updated
         self.settings.save(self.settings_path)
         self.interceptor.settings = updated
@@ -3226,4 +3244,21 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    exit_code = main()
+    if _RESTART_REQUESTED:
+        # exec does not run atexit handlers; remove temporary profile data first.
+        for directory in _RESTART_TEMP_DIRS:
+            shutil.rmtree(directory, ignore_errors=True)
+        # Do not inherit flags or --no-tor from the previous network mode.
+        env = os.environ.copy()
+        if _INITIAL_CHROMIUM_FLAGS is None:
+            env.pop("QTWEBENGINE_CHROMIUM_FLAGS", None)
+        else:
+            env["QTWEBENGINE_CHROMIUM_FLAGS"] = _INITIAL_CHROMIUM_FLAGS
+        argv = [sys.executable]
+        if not getattr(sys, "frozen", False):
+            argv.append(str(Path(__file__).resolve()))
+        if "--incognito" in sys.argv:
+            argv.append("--incognito")
+        os.execve(sys.executable, argv, env)
+    raise SystemExit(exit_code)
