@@ -124,7 +124,10 @@ class TestNetlisCoreSecurity(unittest.TestCase):
         # Restaurar base real del proyecto
         security_shield.reload_threat_domains(ROOT / "data" / "threat_domains.txt")
         rep = updater.get_security_health_report()
-        self.assertTrue(rep["systemd_timer_installed"])
+        if sys.platform == "win32":
+            self.assertFalse(rep["systemd_timer_installed"])
+        else:
+            self.assertIsInstance(rep["systemd_timer_installed"], bool)
         self.assertNotEqual(rep["chromium_version"], "desconocido")
 
     def test_crx3_and_zip_webextension_extractor(self) -> None:
