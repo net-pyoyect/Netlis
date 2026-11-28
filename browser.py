@@ -44,6 +44,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget,
     QTabBar,
     QToolBar,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -82,12 +83,12 @@ NEWTAB_URL = "netlis://newtab"
 NETLIS_NORMAL_QSS = """
 QMainWindow { background: transparent; }
 QWidget#windowFrame {
-    background-color: #2e2e32;
-    border: 1px solid #3c3c40;
-    border-radius: 14px;
+    background-color: #1c1b22;
+    border: 1px solid #292830;
+    border-radius: 8px;
 }
 QWidget#tabStrip {
-    background-color: #2e2e32;
+    background-color: #1c1b22;
     border-top-left-radius: 14px;
     border-top-right-radius: 14px;
     padding-top: 4px;
@@ -96,19 +97,19 @@ QTabBar { background: transparent; }
 QTabBar::tab {
     background: transparent;
     color: #c8c8cc;
-    padding: 7px 8px 7px 14px;
-    margin: 3px 3px;
-    border-radius: 16px;
-    min-width: 165px;
+    padding: 9px 8px 9px 12px;
+    margin: 4px 3px;
+    border-radius: 6px;
+    min-width: 150px;
     max-width: 250px;
     font-size: 13.5px;
 }
 QTabBar::tab:selected {
-    background-color: #3e3e44;
-    border: 1px solid rgba(255, 255, 255, 55);
+    background-color: #42414d;
+    border: 1px solid #605f6b;
     color: #ffffff;
 }
-QTabBar::tab:hover:!selected { background-color: #36363c; color: #ffffff; }
+QTabBar::tab:hover:!selected { background-color: #35343f; color: #ffffff; }
 QPushButton#tabCloseBtn {
     min-width: 18px; max-width: 18px; min-height: 18px; max-height: 18px;
     padding: 0px; margin-right: 6px;
@@ -133,7 +134,7 @@ QMenu::item {
     border-radius: 6px;
 }
 QMenu::item:selected {
-    background-color: #545458;
+    background-color: #2b2a33;
     color: #ffffff;
 }
 QMenu::separator {
@@ -142,11 +143,11 @@ QMenu::separator {
     margin: 4px 8px;
 }
 QToolBar#navBar {
-    background-color: #545458;
+    background-color: #2b2a33;
     border: none;
     spacing: 6px;
-    padding: 6px 12px;
-    min-height: 44px;
+    padding: 4px 8px;
+    min-height: 40px;
 }
 QToolButton {
     background-color: transparent;
@@ -156,8 +157,8 @@ QToolButton {
     padding: 6px 9px;
     font-size: 17px;
 }
-QToolButton:hover { background-color: #636368; color: #ffffff; }
-QToolButton:pressed { background-color: #48484b; }
+QToolButton:hover { background-color: #42414d; color: #ffffff; }
+QToolButton:pressed { background-color: #1c1b22; }
 QPushButton {
     background-color: transparent;
     color: #e4e4e7;
@@ -166,7 +167,7 @@ QPushButton {
     padding: 6px 9px;
     font-size: 14px;
 }
-QPushButton:hover { background-color: #636368; color: #ffffff; }
+QPushButton:hover { background-color: #42414d; color: #ffffff; }
 QPushButton#pluginIconBtn {
     min-width: 34px; max-width: 34px; min-height: 32px; max-height: 32px;
     padding: 0px;
@@ -175,9 +176,9 @@ QPushButton#pluginIconBtn {
     border: none;
     font-size: 16px;
 }
-QPushButton#pluginIconBtn:hover { background-color: #636368; }
+QPushButton#pluginIconBtn:hover { background-color: #42414d; }
 QPushButton#shieldBtn {
-    background-color: #b02a37;
+    background-color: #42414d;
     border: none;
     color: #ffffff;
     font-weight: 700;
@@ -186,9 +187,9 @@ QPushButton#shieldBtn {
     font-size: 12px;
     min-height: 26px;
 }
-QPushButton#shieldBtn:hover { background-color: #c83442; }
+QPushButton#shieldBtn:hover { background-color: #52515e; }
 QPushButton#ipBtn {
-    background-color: #48484b;
+    background-color: #1c1b22;
     border: none;
     color: #ececef;
     border-radius: 7px;
@@ -197,12 +198,12 @@ QPushButton#ipBtn {
     font-weight: 600;
     min-height: 26px;
 }
-QPushButton#ipBtn:hover { background-color: #636368; }
+QPushButton#ipBtn:hover { background-color: #42414d; }
 QPushButton#winBtn, QPushButton#winCloseBtn {
     min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px;
     padding: 0px;
-    border-radius: 13px;
-    background-color: #434347;
+    border-radius: 5px;
+    background-color: transparent;
     color: #e4e4e7;
     font-size: 12px;
 }
@@ -217,15 +218,15 @@ QLineEdit#urlBarInput {
     selection-background-color: #0060df;
 }
 QFrame#urlPill {
-    background-color: #48484b;
+    background-color: #1c1b22;
     border: 1px solid transparent;
-    border-radius: 19px;
+    border-radius: 8px;
 }
-QFrame#urlPill:hover { background-color: #4f4f53; }
+QFrame#urlPill:hover { background-color: #23222b; }
 QPushButton#searchPickBtn {
-    background-color: #5b5b60;
+    background-color: transparent;
     border: none;
-    border-radius: 14px;
+    border-radius: 8px;
     padding: 3px 9px 3px 7px;
     margin: 3px 2px 3px 4px;
     color: #f2f2f6;
@@ -234,8 +235,8 @@ QPushButton#searchPickBtn {
 }
 QPushButton#searchPickBtn:hover { background-color: #6c6c72; }
 QWidget#bookmarksStrip {
-    background-color: #545458;
-    border-bottom: 1px solid #3c3c40;
+    background-color: #2b2a33;
+    border-bottom: 1px solid #292830;
 }
 QPushButton#bmLinkBtn {
     background: transparent;
@@ -245,12 +246,12 @@ QPushButton#bmLinkBtn {
     padding: 3px 9px;
     border-radius: 5px;
 }
-QPushButton#bmLinkBtn:hover { background-color: #636368; color: #ffffff; }
+QPushButton#bmLinkBtn:hover { background-color: #42414d; color: #ffffff; }
 QProgressBar { background-color: transparent; border: none; max-height: 2px; border-radius: 1px; }
 QProgressBar::chunk { background-color: #b499fa; border-radius: 1px; }
 QWidget#findBar {
-    background-color: #545458;
-    border-bottom: 1px solid #3c3c40;
+    background-color: #2b2a33;
+    border-bottom: 1px solid #292830;
 }
 QStackedWidget#contentArea { background-color: #131215; }
 """
@@ -653,10 +654,16 @@ def _make_account_avatar_icon(active: bool = False) -> QIcon:
 def normalize_input_to_url(raw: str, search_engine: str = "duckduckgo") -> QUrl:
     """Convierte texto de la barra de direcciones en URL o búsqueda con el buscador elegido."""
     text = raw.strip()
+    prefix, separator, query = text.partition(" ")
+    if separator and prefix.startswith("@") and prefix[1:].lower() in SEARCH_ENGINES and query.strip():
+        _, base_url = SEARCH_ENGINES[prefix[1:].lower()]
+        return QUrl(f"{base_url}{quote_plus(query.strip())}")
     if not text or text == NEWTAB_URL:
         return QUrl(NEWTAB_URL)
     if "://" in text:
         return QUrl(text)
+    if Path(text).is_file():
+        return QUrl.fromLocalFile(str(Path(text).resolve()))
     if " " not in text and ("." in text or text.startswith("localhost")):
         return QUrl(f"https://{text}")
     _, base_url = SEARCH_ENGINES.get(search_engine, SEARCH_ENGINES["duckduckgo"])
@@ -988,6 +995,11 @@ class BrowserWindow(QMainWindow):
     def _get_google_vault_profile(self) -> QWebEngineProfile:
         if self._google_vault_profile is not None:
             return self._google_vault_profile
+        if self.incognito or self.settings.clear_on_exit:
+            prof = self._create_ephemeral_named_profile("google")
+            self._google_vault_profile = prof
+            self._configure_web_profile(prof)
+            return prof
         vault_dir = self.data_dir / "google_vault"
         storage_dir = vault_dir / "storage"
         cache_dir = vault_dir / "cache"
@@ -1277,219 +1289,22 @@ class BrowserWindow(QMainWindow):
                 QMessageBox.warning(self, "Error al desbloquear", str(exc))
                 return
 
-        cur_view = self._current_view()
-        cur_host = normalize_domain(cur_view.url().host()) if cur_view is not None else ""
-
-        dlg = RoundedDialog(self)
-        dlg.setWindowTitle("Bóveda Local Cifrada — Netlis (Cero Nube)")
-        dlg.resize(590, 480)
-        dlg.setStyleSheet(IOS_GLASS_QSS)
-        lay = QVBoxLayout(dlg)
-        lay.setContentsMargins(20, 18, 20, 18)
-        lay.setSpacing(10)
-
-        hdr_row = QHBoxLayout()
-        hdr_lbl = QLabel("🔑  Bóveda Local Cifrada (Cero Nube)")
-        hdr_lbl.setObjectName("dlgTitle")
-        close_x = QPushButton("✕")
-        close_x.setObjectName("closePill")
-        close_x.setFixedSize(28, 28)
-        close_x.clicked.connect(dlg.accept)
-        hdr_row.addWidget(hdr_lbl, 1)
-        hdr_row.addWidget(close_x)
-        lay.addLayout(hdr_row)
-
-        info_lbl = QLabel(
-            f"Sitio actual: {cur_host or '(ninguno)'}   •   Cifrado local scrypt + HMAC-SHA256"
-        )
-        info_lbl.setStyleSheet("color: #93c5fd; font-size: 12px; background: transparent;")
-        lay.addWidget(info_lbl)
-
-        search_in = QLineEdit()
-        search_in.setPlaceholderText("🔍  Buscar por dominio o usuario...")
-        search_in.setStyleSheet(
-            "background: rgba(255,255,255,0.06); color: #f0f0f5; border: 1px solid rgba(255,255,255,0.14); "
-            "border-radius: 12px; padding: 8px 12px; font-size: 12.5px;"
-        )
-        lay.addWidget(search_in)
-
-        list_w = QListWidget()
-        list_w.setStyleSheet(
-            """
-            QListWidget {
-                background: rgba(18, 17, 26, 175);
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 14px;
-                padding: 6px;
-                color: #f0f0f5;
-                font-size: 12.5px;
-            }
-            QListWidget::item {
-                padding: 9px 12px;
-                margin: 2px 0;
-                border-radius: 10px;
-            }
-            QListWidget::item:hover { background: rgba(255, 255, 255, 0.08); }
-            QListWidget::item:selected {
-                background: rgba(59, 130, 246, 0.34);
-                border: 1px solid rgba(96, 165, 250, 0.45);
-                color: #ffffff;
-            }
-            """
-        )
-        lay.addWidget(list_w, 1)
-
-        def _filtered_entries() -> list:
-            q = search_in.text().strip().lower()
-            items = self.pass_vault.entries()
-            if q:
-                items = [e for e in items if q in e.domain.lower() or q in e.username.lower()]
-            items.sort(key=lambda e: (0 if cur_host and normalize_domain(e.domain) == cur_host else 1, e.domain, e.username))
-            return items
-
-        def _refresh_list() -> None:
-            list_w.clear()
-            for e in _filtered_entries():
-                tag = "★  " if cur_host and normalize_domain(e.domain) == cur_host else "🔑  "
-                list_w.addItem(f"{tag}{e.domain}   •   {e.username}")
-            if list_w.count() > 0:
-                list_w.setCurrentRow(0)
-
-        search_in.textChanged.connect(lambda _t: _refresh_list())
-        _refresh_list()
-
-        form_card = QFrame()
-        form_card.setStyleSheet(
-            """
-            QFrame {
-                background: rgba(255, 255, 255, 0.06);
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 14px;
-            }
-            QLineEdit {
-                background: rgba(15, 14, 22, 180);
-                color: #f0f0f5;
-                border: 1px solid rgba(255, 255, 255, 0.14);
-                border-radius: 10px;
-                padding: 7px 10px;
-                font-size: 12.5px;
-            }
-            """
-        )
-        form_lay = QVBoxLayout(form_card)
-        form_lay.setContentsMargins(12, 10, 12, 10)
-        form_lay.setSpacing(8)
-
-        row_top = QHBoxLayout()
-        dom_in = QLineEdit(cur_host)
-        dom_in.setPlaceholderText("Dominio (ej. github.com)")
-        usr_in = QLineEdit()
-        usr_in.setPlaceholderText("Usuario o correo")
-        row_top.addWidget(dom_in, 1)
-        row_top.addWidget(usr_in, 1)
-        form_lay.addLayout(row_top)
-
-        row_bot = QHBoxLayout()
-        pwd_in = QLineEdit()
-        pwd_in.setPlaceholderText("Contraseña")
-        pwd_in.setEchoMode(QLineEdit.EchoMode.Password)
-        eye_btn = QPushButton("👁")
-        eye_btn.setToolTip("Mostrar / ocultar contraseña")
-        eye_btn.setFixedWidth(36)
-        eye_btn.clicked.connect(
-            lambda: pwd_in.setEchoMode(
-                QLineEdit.EchoMode.Normal if pwd_in.echoMode() == QLineEdit.EchoMode.Password else QLineEdit.EchoMode.Password
-            )
-        )
-        gen_btn = QPushButton("🎲")
-        gen_btn.setToolTip("Generar contraseña fuerte de 20 caracteres")
-        gen_btn.setFixedWidth(36)
-        gen_btn.clicked.connect(lambda: (pwd_in.setText(generate_strong_password()), pwd_in.setEchoMode(QLineEdit.EchoMode.Normal)))
-        save_btn = QPushButton("Guardar clave")
-        save_btn.setStyleSheet(
-            "QPushButton { background: #3b82f6; color: #ffffff; border: none; border-radius: 10px; padding: 7px 14px; font-weight: 600; } "
-            "QPushButton:hover { background: #2563eb; }"
-        )
-
-        def _on_save() -> None:
-            try:
-                self.pass_vault.add_or_update(dom_in.text(), usr_in.text(), pwd_in.text())
-                usr_in.clear()
-                pwd_in.clear()
-                _refresh_list()
-            except ValueError as exc:
-                QMessageBox.warning(dlg, "Bóveda", str(exc))
-
-        save_btn.clicked.connect(_on_save)
-        for w_item in (pwd_in, eye_btn, gen_btn, save_btn):
-            row_bot.addWidget(w_item)
-        row_bot.setStretch(0, 1)
-        form_lay.addLayout(row_bot)
-        lay.addWidget(form_card)
-
-        act_row = QHBoxLayout()
-        fill_btn = QPushButton("✨ Rellenar aquí")
-        fill_btn.setStyleSheet(
-            "QPushButton { background: #3b82f6; color: #ffffff; border: none; border-radius: 11px; padding: 8px 14px; font-weight: 600; } "
-            "QPushButton:hover { background: #2563eb; }"
-        )
-        cp_user_btn = QPushButton("Copiar usuario")
-        cp_pwd_btn = QPushButton("Copiar clave")
-        del_btn = QPushButton("Eliminar")
-        lock_btn = QPushButton("🔒 Bloquear")
-
-        def _selected_entry():
-            idx = list_w.currentRow()
-            items = _filtered_entries()
-            if 0 <= idx < len(items):
-                return items[idx]
-            return None
-
-        def _fill_current() -> None:
-            ent = _selected_entry()
-            if ent is None or cur_view is None:
+        from password_page import PasswordPage
+        for i in range(self.stack.count()):
+            if isinstance(self.stack.widget(i), PasswordPage):
+                self.tab_bar.setCurrentIndex(i)
                 return
-            if normalize_domain(ent.domain) != cur_host:
-                QMessageBox.warning(
-                    dlg,
-                    "Bloqueo de seguridad",
-                    f"Esta clave pertenece a '{ent.domain}', no a '{cur_host}'.\n"
-                    "Netlis nunca envía contraseñas a otros dominios.",
-                )
-                return
-            js_fill = f"""
-            (() => {{
-                const u = {json.dumps(ent.username)};
-                const p = {json.dumps(ent.password)};
-                const pwEl = document.querySelector('input[type="password"]');
-                if (!pwEl) return false;
-                const form = pwEl.form || document;
-                const uEl = form.querySelector('input[type="email"], input[name*="user" i], input[name*="mail" i], input[type="text"]');
-                const setVal = (el, val) => {{
-                    if (!el) return;
-                    el.focus();
-                    el.value = val;
-                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                }};
-                setVal(uEl, u);
-                setVal(pwEl, p);
-                return true;
-            }})();
-            """
-            cur_view.page().runJavaScript(js_fill)
-            dlg.accept()
-
-        fill_btn.clicked.connect(_fill_current)
-        cp_user_btn.clicked.connect(lambda: _selected_entry() and QApplication.clipboard().setText(_selected_entry().username))
-        cp_pwd_btn.clicked.connect(lambda: _selected_entry() and QApplication.clipboard().setText(_selected_entry().password))
-        del_btn.clicked.connect(lambda: _selected_entry() and (self.pass_vault.delete(_selected_entry().domain, _selected_entry().username), _refresh_list()))
-        lock_btn.clicked.connect(lambda: (self.pass_vault.lock(), dlg.accept()))
-
-        for b_item in (fill_btn, cp_user_btn, cp_pwd_btn, del_btn, lock_btn):
-            act_row.addWidget(b_item)
-        lay.addLayout(act_row)
-        dlg.exec()
+        page = PasswordPage(self.pass_vault, lambda: self._close_view(page), self)
+        self.stack.addWidget(page)
+        idx = self.tab_bar.addTab("Contraseñas")
+        close_btn = QPushButton("✕")
+        close_btn.setObjectName("tabCloseBtn")
+        close_btn.setToolTip("Cerrar pestaña")
+        close_btn.clicked.connect(lambda: self._close_view(page))
+        self.tab_bar.setTabButton(idx, QTabBar.ButtonPosition.RightSide, close_btn)
+        self.tab_bar.setCurrentIndex(idx)
+        self.stack.setCurrentWidget(page)
+        self.url_bar.setText("netlis://passwords")
 
     def _configure_web_profile(self, prof: QWebEngineProfile) -> None:
         prof.setUrlRequestInterceptor(self.interceptor)
@@ -1752,10 +1567,6 @@ class BrowserWindow(QMainWindow):
         max_btn.setToolTip("Maximizar / Restaurar")
         max_btn.clicked.connect(self._toggle_maximize)
 
-        strip_layout.addWidget(close_btn)
-        strip_layout.addWidget(min_btn)
-        strip_layout.addWidget(max_btn)
-        strip_layout.addSpacing(8)
 
         self.tab_bar = QTabBar()
         self.tab_bar.setIconSize(QSize(16, 16))
@@ -1784,6 +1595,9 @@ class BrowserWindow(QMainWindow):
         priv_win_btn.setToolTip("Nueva ventana privada (Ctrl+Shift+N)")
         priv_win_btn.clicked.connect(self.open_incognito_window)
         strip_layout.addWidget(priv_win_btn)
+        strip_layout.addWidget(min_btn)
+        strip_layout.addWidget(max_btn)
+        strip_layout.addWidget(close_btn)
 
         root_layout.addWidget(self.tab_strip)
 
@@ -1806,14 +1620,15 @@ class BrowserWindow(QMainWindow):
         self.bookmark_act = QAction("☆", self)
         self.bookmark_act.setToolTip("Guardar marcador (Ctrl+D)")
         self.bookmark_act.triggered.connect(self._toggle_current_bookmark)
-        nav_bar.addAction(self.bookmark_act)
+
 
         left_sp = QWidget()
-        left_sp.setFixedWidth(18)
+        left_sp.setFixedWidth(4)
         nav_bar.addWidget(left_sp)
 
         url_pill = QFrame()
         url_pill.setObjectName("urlPill")
+        url_pill.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         url_pill_lay = QHBoxLayout(url_pill)
         url_pill_lay.setContentsMargins(2, 0, 6, 0)
         url_pill_lay.setSpacing(4)
@@ -1827,16 +1642,19 @@ class BrowserWindow(QMainWindow):
         self.url_bar = QLineEdit()
         self.url_bar.setObjectName("urlBarInput")
         self.url_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.url_bar.setMinimumWidth(360)
+        self.url_bar.setMinimumWidth(240)
         self._refresh_url_bar_placeholder()
         self.url_bar.returnPressed.connect(self._on_url_entered)
 
         url_pill_lay.addWidget(self.search_pick_btn)
         url_pill_lay.addWidget(self.url_bar, stretch=1)
+        bookmark_btn = QToolButton()
+        bookmark_btn.setDefaultAction(self.bookmark_act)
+        url_pill_lay.addWidget(bookmark_btn)
         nav_bar.addWidget(url_pill)
 
         right_sp = QWidget()
-        right_sp.setFixedWidth(28)
+        right_sp.setFixedWidth(6)
         nav_bar.addWidget(right_sp)
 
         dl_btn = QPushButton("↓")
@@ -2397,8 +2215,10 @@ class BrowserWindow(QMainWindow):
 
     def close_tab(self, index: int) -> None:
         if self.tab_bar.count() <= 1:
-            self._open_newtab_in_current()
-            return
+            if self._current_view() is not None:
+                self._open_newtab_in_current()
+                return
+            self.add_new_tab(None, "Inicio")
         widget = self.stack.widget(index)
         if isinstance(widget, QWebEngineView):
             u_str = widget.url().toString()
@@ -2481,6 +2301,7 @@ class BrowserWindow(QMainWindow):
     def _navigate(self, raw_url: str) -> None:
         view = self._current_view()
         if view is None:
+            self.add_new_tab(normalize_input_to_url(raw_url, self.appearance.search_engine))
             return
         qurl = normalize_input_to_url(raw_url, self.appearance.search_engine)
         if qurl.toString() == NEWTAB_URL:
@@ -2495,20 +2316,19 @@ class BrowserWindow(QMainWindow):
     def _on_url_entered(self) -> None:
         self._navigate(self.url_bar.text())
 
-    @staticmethod
-    def _format_display_url(url_str: str) -> str:
+    def _format_display_url(self, url_str: str) -> str:
         if not url_str or url_str == NEWTAB_URL or url_str.startswith("about:"):
             return ""
         parsed = urlparse(url_str)
         host = parsed.netloc.lower()
-        if (
+        if self.appearance.show_search_terms and (
             url_str.startswith("netlis://search")
-            or any(d in host for d in ("duckduckgo.com", "google.com", "search.brave.com", "startpage.com"))
+            or any(host == d or host.endswith("." + d) for d in ("duckduckgo.com", "google.com", "search.brave.com", "startpage.com", "bing.com", "wikipedia.org"))
         ):
             qs = parse_qs(parsed.query)
-            for key in ("q", "query"):
+            for key in ("q", "query", "search"):
                 if key in qs and qs[key]:
-                    return unquote_plus(qs[key][0]).strip()
+                    return qs[key][0].strip()
         if url_str.startswith("https://"):
             return url_str[8:]
         return url_str
@@ -2516,6 +2336,21 @@ class BrowserWindow(QMainWindow):
     def _on_tab_changed(self, index: int) -> None:
         if 0 <= index < self.stack.count():
             self.stack.setCurrentIndex(index)
+        from settings_page import SettingsPage
+        if isinstance(self.stack.currentWidget(), SettingsPage):
+            self.url_bar.setText("netlis://settings")
+            self.setWindowTitle("Ajustes — Netlis")
+            return
+        from extensions_page import ExtensionsPage
+        if isinstance(self.stack.currentWidget(), ExtensionsPage):
+            self.url_bar.setText("netlis://extensions")
+            self.setWindowTitle("Extensiones — Netlis")
+            return
+        from password_page import PasswordPage
+        if isinstance(self.stack.currentWidget(), PasswordPage):
+            self.url_bar.setText("netlis://passwords")
+            self.setWindowTitle("Contraseñas — Netlis")
+            return
         view = self._current_view()
         if view is not None:
             self._tab_last_active[view] = time.monotonic()
@@ -2746,6 +2581,10 @@ class BrowserWindow(QMainWindow):
         self._tor_pending_urls.clear()
         self._last_requested_url.clear()
         self.storage.clear_history()
+        for prof in self._all_profiles():
+            prof.clearHttpCache()
+            prof.cookieStore().deleteAllCookies()
+        shutil.rmtree(self.data_dir / "google_vault", ignore_errors=True)
         self.profile.clearHttpCache()
         self.profile.cookieStore().deleteAllCookies()
         if self.storage.history_path.exists():
@@ -2870,7 +2709,7 @@ class BrowserWindow(QMainWindow):
         popup = QWidget(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
         popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        popup.setFixedWidth(332)
+        popup.setFixedWidth(352)
         outer_lay = QVBoxLayout(popup)
         outer_lay.setContentsMargins(0, 0, 0, 0)
         card = QFrame()
@@ -2878,15 +2717,15 @@ class BrowserWindow(QMainWindow):
         card.setStyleSheet(
             """
             QFrame#netlisMainMenu {
-                background-color: rgba(43, 42, 51, 250);
+                background-color: #2b2a33;
                 border: 1px solid rgba(255, 255, 255, 0.14);
-                border-radius: 12px;
+                border-radius: 8px;
                 color: #fbfbfe;
                 font-family: "Cantarell", "Noto Sans", "Ubuntu", "Segoe UI", sans-serif;
             }
             QFrame#menuAccountBanner {
-                background-color: rgba(82, 92, 190, 0.34);
-                border: 1px solid rgba(130, 145, 255, 0.28);
+                background-color: #303039;
+                border: 1px solid #45444f;
                 border-radius: 10px;
             }
             QPushButton#menuRow {
@@ -2948,10 +2787,10 @@ class BrowserWindow(QMainWindow):
         b_lay.addWidget(av)
         b_txt = QVBoxLayout()
         b_txt.setSpacing(1)
-        b_t1 = QLabel((acct_name or acct_email) if acct_email else "Inicia sesión en Google")
+        b_t1 = QLabel((acct_name or acct_email) if acct_email else "Cuenta de Google")
         b_t1.setStyleSheet("font-weight: 600; font-size: 12.5px; color: #ffffff; background: transparent;")
         b_t2 = QLabel(
-            acct_email if acct_email else "Descuida: ninguna página verá tu correo sin permiso."
+            acct_email if acct_email else "Abrir en un perfil separado"
         )
         b_t2.setWordWrap(True)
         b_t2.setStyleSheet("font-size: 11px; color: rgba(225, 230, 255, 205); background: transparent;")
@@ -2977,7 +2816,7 @@ class BrowserWindow(QMainWindow):
             btn.setObjectName("menuRow")
             btn.setEnabled(enabled)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setMinimumHeight(28)
+            btn.setMinimumHeight(34)
             r_lay = QHBoxLayout(btn)
             r_lay.setContentsMargins(10, 3, 10, 3)
             r_lay.setSpacing(8)
@@ -2999,7 +2838,7 @@ class BrowserWindow(QMainWindow):
             root.addWidget(btn)
 
         _add_row("Nueva pestaña", lambda: self.add_new_tab(None, "Inicio"), "Ctrl+T")
-        _add_row("Pestaña contenedor aislado", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
+        _add_row("Nueva pestaña aislada", lambda: self.add_new_tab(None, "Contenedor", isolated_container=True))
         _add_row("Reabrir pestaña cerrada", self._reopen_closed_tab, "Ctrl+Mayús.+T", enabled=bool(self._closed_tabs))
         _add_row("Nueva ventana privada", self.open_incognito_window, "Ctrl+Mayús.+N")
         _add_sep()
@@ -3007,7 +2846,7 @@ class BrowserWindow(QMainWindow):
         _add_row("Historial", self._show_history, "Ctrl+H")
         _add_row("Descargas", self._show_downloads, "Ctrl+J")
         _add_row("Contraseñas", self._show_password_vault)
-        _add_row("Extensiones y plugins", self._show_plugin_store)
+        _add_row("Extensiones", self._show_plugin_store)
         _add_sep()
 
         _add_row("Buscar en la página", self._open_find_bar, "Ctrl+F")
@@ -3077,6 +2916,11 @@ class BrowserWindow(QMainWindow):
         )
 
     def _show_plugin_store(self) -> None:
+        from extensions_page import ExtensionsPage
+        for i in range(self.stack.count()):
+            if isinstance(self.stack.widget(i), ExtensionsPage):
+                self.tab_bar.setCurrentIndex(i)
+                return
         web_ext_api = {
             "list": self._list_web_extensions,
             "install_path": self._install_web_extension_path,
@@ -3092,8 +2936,31 @@ class BrowserWindow(QMainWindow):
             )
             self.plugins_btn.setToolTip(f"Extensiones y Plugins ({n_tot} activos)")
 
-        dlg = PluginStoreDialog(self.plugin_mgr, _on_plugins_changed, self, web_ext_api=web_ext_api)
-        dlg.exec()
+        page = ExtensionsPage(self.plugin_mgr, _on_plugins_changed, web_ext_api,
+                              lambda: self._close_view(page), self._show_appearance,
+                              self._show_privacy_center, self,
+                              current_theme=self.appearance.chrome_theme, apply_theme=self._set_chrome_theme)
+        self.stack.addWidget(page)
+        idx = self.tab_bar.addTab("Extensiones")
+        close_btn = QPushButton("✕")
+        close_btn.setObjectName("tabCloseBtn")
+        close_btn.setToolTip("Cerrar pestaña")
+        close_btn.clicked.connect(lambda: self._close_view(page))
+        self.tab_bar.setTabButton(idx, QTabBar.ButtonPosition.RightSide, close_btn)
+        self.tab_bar.setCurrentIndex(idx)
+        self.stack.setCurrentWidget(page)
+        self.url_bar.setText("netlis://extensions")
+
+    def _set_chrome_theme(self, key: str) -> None:
+        from theme_page import THEMES
+        if key not in THEMES:
+            return
+        self.appearance.chrome_theme = key
+        self.appearance.save(self.appearance_path)
+        for window in self._open_windows:
+            window.appearance.chrome_theme = key
+            window._apply_theme_stylesheet()
+        self._apply_theme_stylesheet()
 
     def _apply_theme_stylesheet(self) -> None:
         if self.incognito:
@@ -3102,6 +2969,9 @@ class BrowserWindow(QMainWindow):
             self.setStyleSheet(NETLIS_ANTIGRAVITY_QSS)
         else:
             self.setStyleSheet(NETLIS_NORMAL_QSS)
+        if not self.incognito:
+            from theme_page import theme_qss
+            self.setStyleSheet(self.styleSheet() + theme_qss(self.appearance.chrome_theme))
 
     def _refresh_url_bar_placeholder(self) -> None:
         eng_label = SEARCH_ENGINES.get(self.appearance.search_engine, SEARCH_ENGINES["duckduckgo"])[0].split(" (")[0]
@@ -3165,23 +3035,47 @@ class BrowserWindow(QMainWindow):
         )
         dlg.exec()
 
-    def _show_privacy_center(self) -> None:
-        def _on_save(updated: PrivacySettings) -> None:
-            self.settings = updated
-            self.settings.save(self.settings_path)
-            self.interceptor.settings = updated
-            self._apply_profile_privacy()
-            apply_qt_network_proxy(updated)
-            if TOR_ENGINE is not None and updated.proxy_enabled:
-                TOR_ENGINE.set_bridges_enabled(updated.tor_bridges_obfs4)
-                TOR_ENGINE.set_exit_region(updated.ip_region)
-            self.ip_btn.setText(self._ip_button_text())
+    def _refresh_home_pages(self) -> None:
+        for i in range(self.stack.count()):
+            view = self.stack.widget(i)
+            if isinstance(view, QWebEngineView) and view.url().toString().startswith(NEWTAB_URL):
+                self._load_newtab_html(view)
 
+    def _show_privacy_center(self) -> None:
+        from settings_page import SettingsPage
+        for i in range(self.stack.count()):
+            if isinstance(self.stack.widget(i), SettingsPage):
+                self.tab_bar.setCurrentIndex(i)
+                return
+        page = SettingsPage(self)
+        self.stack.addWidget(page)
+        idx = self.tab_bar.addTab("Ajustes")
+        close_btn = QPushButton("✕")
+        close_btn.setObjectName("tabCloseBtn")
+        close_btn.setToolTip("Cerrar pestaña")
+        close_btn.clicked.connect(lambda: self._close_view(page))
+        self.tab_bar.setTabButton(idx, QTabBar.ButtonPosition.RightSide, close_btn)
+        self.tab_bar.setCurrentIndex(idx)
+        self.stack.setCurrentWidget(page)
+        self.url_bar.setText("netlis://settings")
+
+    def _apply_privacy_settings(self, updated: PrivacySettings) -> None:
+        self.settings = updated
+        self.settings.save(self.settings_path)
+        self.interceptor.settings = updated
+        self._apply_profile_privacy()
+        apply_qt_network_proxy(updated)
+        if TOR_ENGINE is not None and updated.proxy_enabled:
+            TOR_ENGINE.set_bridges_enabled(updated.tor_bridges_obfs4)
+            TOR_ENGINE.set_exit_region(updated.ip_region)
+        self.ip_btn.setText(self._ip_button_text())
+
+    def _show_advanced_privacy_center(self) -> None:
         dlg = PrivacyCenterDialog(
             self.settings,
             self.interceptor.blocked_count,
             self.interceptor.https_upgrades,
-            _on_save,
+            self._apply_privacy_settings,
             self._wipe_browsing_data,
             self,
         )

@@ -62,4 +62,5 @@ class BrowserStorage:
 
     def clear_history(self) -> None:
         self.history.clear()
-        self._save_json(self.history_path, self.history)
+        for suffix in (".json", ".json.bak", ".json.tmp"):
+            self.history_path.with_suffix(suffix).unlink(missing_ok=True)

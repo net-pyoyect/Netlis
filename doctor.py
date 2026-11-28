@@ -220,7 +220,7 @@ def run_doctor(auto_fix: bool = False) -> int:
 
     apparmor_userns = Path("/proc/sys/kernel/apparmor_restrict_unprivileged_userns")
     if apparmor_userns.is_file() and apparmor_userns.read_text(encoding="utf-8", errors="ignore").strip() == "1":
-        _ok("AppArmor userns activo (launch.sh aplica QTWEBENGINE_DISABLE_SANDBOX=1 automáticamente)")
+        _ok("AppArmor userns activo: configurar permiso del sandbox si Chromium no inicia")
 
     # 6. Acceso directo .desktop
     print("\n[6/6] Verificando acceso directo del menú...")

@@ -35,7 +35,7 @@ def _is_tor_up() -> bool:
 
 
 def _fetch_text(url_str: str, use_tor: bool, timeout: float = 6.5, custom_ua: str = "") -> str:
-    if use_tor and _is_tor_up():
+    if use_tor:
         return fetch_text_via_socks5(url_str, socks_port=SOCKS_PORT, timeout=timeout)
     ua = custom_ua or "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
     req = Request(
@@ -190,7 +190,7 @@ def run_netlis_metasearch(query: str, use_tor: bool = True) -> dict:
     if not clean_q:
         return {"query": "", "results": [], "wiki": None, "via_tor": use_tor and _is_tor_up()}
 
-    via_tor = use_tor and _is_tor_up()
+    via_tor = use_tor
     bing_res: list[SearchResult] = []
     brave_res: list[SearchResult] = []
     wiki_card: dict[str, str] | None = None
@@ -307,12 +307,11 @@ def render_search_results_html(data: dict) -> str:
         for res in results:
             parsed = urlparse(res.url)
             domain = parsed.netloc or res.url
-            fav = f"https://www.google.com/s2/favicons?sz=32&domain={html.escape(domain)}"
             src_pill = " + ".join(res.sources)
             cards_html += f"""
             <article class="res-card">
               <div class="res-meta">
-                <img class="fav" src="{fav}" alt="" onerror="this.style.display='none'">
+                <span class="fav" aria-hidden="true">◇</span>
                 <span class="dom">{html.escape(domain)}</span>
                 <span class="src-pill">{html.escape(src_pill)}</span>
               </div>

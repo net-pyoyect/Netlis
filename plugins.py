@@ -919,20 +919,8 @@ class PluginManager:
         if parsed.scheme.lower() not in ("https", "http") or not parsed.hostname:
             return False, "Introduce una dirección https:// válida hacia un archivo .js o .user.js."
 
-        tor_up = False
         try:
-            with socket.create_connection((SOCKS_HOST, SOCKS_PORT), timeout=0.25):
-                tor_up = True
-        except OSError:
-            pass
-
-        try:
-            if tor_up:
-                code = fetch_text_via_socks5(clean_url, socks_port=SOCKS_PORT, timeout=timeout)
-            else:
-                req = Request(clean_url, headers={"User-Agent": "Mozilla/5.0"})
-                with urlopen(req, timeout=timeout) as resp:
-                    code = resp.read().decode("utf-8", errors="ignore")
+            code = fetch_text_via_socks5(clean_url, socks_port=SOCKS_PORT, timeout=timeout)
         except Exception as exc:
             return False, f"No se pudo descargar el script: {exc}"
 

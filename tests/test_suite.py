@@ -9,6 +9,7 @@ import struct
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
@@ -260,7 +261,7 @@ class TestNetlisCoreSecurity(unittest.TestCase):
                 encoding="utf-8",
             )
             (p_dir / "data").mkdir()
-            (p_dir / "data" / "privacidad.json").write_text('{"keep": true}', encoding="utf-8")
+            (p_dir / "data" / "privacidad.json").write_text('{"keep": true, "proxy_enabled": false}', encoding="utf-8")
 
             # Construir ZIP de actualización simulada en servidor local
             zip_path = p_dir / "rel.zip"
@@ -288,7 +289,9 @@ class TestNetlisCoreSecurity(unittest.TestCase):
             th = threading.Thread(target=srv.serve_forever, daemon=True)
             th.start()
             try:
-                chk = updater.check_app_update(p_dir, manifest_url=f"http://127.0.0.1:{port}/version.json")
+                # Mock the Tor transport; the feed must never fall back to direct HTTP.
+                with patch.object(updater, "fetch_text_via_socks5", return_value=json.dumps({"version": "1.1.0", "notes": "Nueva mejora"})):
+                    chk = updater.check_app_update(p_dir, manifest_url=f"http://127.0.0.1:{port}/version.json")
                 self.assertTrue(chk["ok"])
                 self.assertTrue(chk["has_update"])
                 self.assertEqual(chk["remote_version"], "1.1.0")
@@ -300,6 +303,7 @@ class TestNetlisCoreSecurity(unittest.TestCase):
                 self.assertEqual(json.loads((p_dir / "data" / "privacidad.json").read_text())["keep"], True)
             finally:
                 srv.shutdown()
+                srv.server_close()
 
 
 class TestNetlisEngineIntegration(unittest.TestCase):

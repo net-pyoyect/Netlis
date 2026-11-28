@@ -81,6 +81,10 @@ def resolve_wallpaper_path(stored_path: str) -> Path | None:
 @dataclass
 class AppearanceSettings:
     preset: str = "netlis"
+    chrome_theme: str = "default"
+    show_home_logo: bool = True
+    show_home_search: bool = True
+    show_search_terms: bool = True
     image_path: str = "assets/netlis_wallpaper.png" if DEFAULT_WALLPAPER.is_file() else ""
     opacity_percent: int = 96
     search_engine: str = "duckduckgo"
@@ -305,9 +309,9 @@ def render_new_tab_html(
 </head>
 <body>
   <div class="wrap">
-    <div class="brand">{logo_html}<h1>{html.escape(title_text)}</h1></div>
+    <div class="brand" style="display: {'flex' if app_cfg.show_home_logo else 'none'}">{logo_html}<h1>{html.escape(title_text)}</h1></div>
 
-    <form class="search-box" onsubmit="event.preventDefault(); const q=document.getElementById('q').value.trim(); if(!q) return; const base={json.dumps(search_base)}; window.location.href = (q.includes('://') ? q : (!q.includes(' ') && q.includes('.') ? 'https://' + q : base + encodeURIComponent(q)));">
+    <form class="search-box" style="display: {'flex' if app_cfg.show_home_search else 'none'}" onsubmit="event.preventDefault(); const q=document.getElementById('q').value.trim(); if(!q) return; const base={json.dumps(search_base)}; window.location.href = (q.includes('://') ? q : (!q.includes(' ') && q.includes('.') ? 'https://' + q : base + encodeURIComponent(q)));">
       {small_logo_html}
       <input id="q" type="text" placeholder="Buscar en la web" autofocus>
     </form>

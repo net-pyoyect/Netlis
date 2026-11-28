@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
@@ -181,6 +182,8 @@ QComboBox {
     font-size: 13px;
 }
 """
+IOS_GLASS_QSS += '\nQWidget { font-size: 13px; }\nQLabel#heading, QLabel#dlgTitle { font-size: 22px; font-weight: 600; color: #fbfbfe; }\nQLabel#subheading, QLabel#cardDesc { color: #b6b5c2; }\nQFrame#sectionCard, QFrame#settingRow { background: #303039; border: 1px solid #45444f; border-radius: 6px; }\nQFrame#settingRow:hover { background: #35343f; border-color: #55545f; }\nQLabel#statPill { background: #35343f; border: none; border-radius: 4px; color: #c9c8d2; }\nQTabBar::tab { background: transparent; border: none; border-radius: 4px; font-weight: 400; padding: 9px 14px; }\nQTabBar::tab:selected { background: #42414d; border: none; }\nQLineEdit, QComboBox { background: #202027; border: 1px solid #52515e; border-radius: 5px; padding: 9px 10px; }\nQLineEdit:focus { background: #202027; border: 1px solid #8eb8ff; }\nQListWidget { background: #232229; border: 1px solid #45444f; border-radius: 6px; }\nQListWidget::item { border-radius: 4px; padding: 12px; }\nQListWidget::item:selected { background: #394964; border: 1px solid #587298; }\nQPushButton { background: #42414d; border: 1px solid transparent; border-radius: 5px; padding: 8px 12px; font-weight: 400; }\nQPushButton:hover { background: #52515e; border: 1px solid transparent; }\nQPushButton:pressed { background: #35343f; }\nQPushButton:focus { border: 1px solid #8eb8ff; }\nQPushButton:disabled { background: #303039; color: #777681; }\nQPushButton#primary { background: #8eb8ff; color: #161b26; border: none; font-weight: 600; }\nQPushButton#primary:hover { background: #a8c8ff; }\nQPushButton#danger { background: transparent; color: #ffadad; border: 1px solid #725253; }\nQPushButton#danger:hover { background: #503438; }\nQPushButton#closePill { padding: 0; background: transparent; }\nQPushButton#closePill:hover { background: #42414d; }\n'
+
 
 
 def _fast_frosted_blur(pixmap: QPixmap, factor: int = 12) -> QPixmap:
@@ -278,7 +281,7 @@ class ToggleRow(QFrame):
 class RoundedDialog(QDialog):
     """Ventana modal con vidrio esmerilado translúcido estilo iPhone sobre la ventana padre."""
 
-    _RADIUS = 22.0
+    _RADIUS = 10.0
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -286,12 +289,6 @@ class RoundedDialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self._drag_pos = None
         self._blurred_parent: QPixmap | None = None
-        if parent is not None and isinstance(parent, QWidget):
-            try:
-                snap = parent.grab()
-                self._blurred_parent = _fast_frosted_blur(snap, factor=13)
-            except Exception:
-                self._blurred_parent = None
 
     def showEvent(self, event) -> None:
         p = self.parentWidget()
@@ -307,41 +304,9 @@ class RoundedDialog(QDialog):
     def paintEvent(self, _event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = QRectF(1.0, 1.0, self.width() - 2.0, self.height() - 2.0)
-
-        clip = QPainterPath()
-        clip.addRoundedRect(rect, self._RADIUS, self._RADIUS)
-        painter.save()
-        painter.setClipPath(clip)
-
-        # 1. Pintar el fondo desenfocado real de la ventana inferior (efecto vidrio iPhone)
-        p_widget = self.parentWidget()
-        if self._blurred_parent is not None and p_widget is not None:
-            top_left_in_parent = p_widget.mapFromGlobal(self.mapToGlobal(QPoint(0, 0)))
-            src_rect = QRect(top_left_in_parent, self.size())
-            painter.drawPixmap(self.rect(), self._blurred_parent, src_rect)
-
-        # 2. Tinte translúcido tipo iOS Dark Glass + reflejo superior
-        glass_grad = QLinearGradient(0, 0, 0, self.height())
-        glass_grad.setColorAt(0.0, QColor(36, 38, 52, 162))
-        glass_grad.setColorAt(1.0, QColor(20, 21, 30, 182))
-        painter.fillRect(rect, glass_grad)
-
-        shine = QLinearGradient(0, 0, 0, 70)
-        shine.setColorAt(0.0, QColor(255, 255, 255, 36))
-        shine.setColorAt(1.0, QColor(255, 255, 255, 0))
-        painter.fillRect(QRectF(rect.left(), rect.top(), rect.width(), 70), shine)
-        painter.restore()
-
-        # 3. Borde especular luminoso de cristal
-        border_grad = QLinearGradient(0, 0, 0, self.height())
-        border_grad.setColorAt(0.0, QColor(255, 255, 255, 115))
-        border_grad.setColorAt(0.5, QColor(255, 255, 255, 48))
-        border_grad.setColorAt(1.0, QColor(255, 255, 255, 28))
-        painter.setPen(QPen(border_grad, 1.2))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRoundedRect(rect, self._RADIUS, self._RADIUS)
-        painter.end()
+        painter.setBrush(QColor("#2b2a33"))
+        painter.setPen(QPen(QColor("#52515e"), 1))
+        painter.drawRoundedRect(QRectF(1, 1, self.width()-2, self.height()-2), self._RADIUS, self._RADIUS)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton and event.position().y() <= 54:
@@ -374,12 +339,7 @@ class AppearanceDialog(RoundedDialog):
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self.appearance = AppearanceSettings(
-            preset=appearance.preset,
-            image_path=appearance.image_path,
-            opacity_percent=appearance.opacity_percent,
-            search_engine=appearance.search_engine,
-        )
+        self.appearance = replace(appearance)
         self.on_apply = on_apply
         self.setWindowTitle("Apariencia — Netlis")
         self.resize(540, 470)
@@ -389,7 +349,7 @@ class AppearanceDialog(RoundedDialog):
         layout.setContentsMargins(20, 18, 20, 18)
         layout.setSpacing(12)
 
-        title = QLabel("Apariencia y cristal")
+        title = QLabel("Apariencia")
         title.setObjectName("heading")
         sub = QLabel("Personaliza el fondo de inicio y la transparencia de Netlis.")
         sub.setObjectName("subheading")

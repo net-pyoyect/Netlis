@@ -79,14 +79,7 @@ def _save_update_status(data_dir: Path, **updates) -> dict:
 
 def _download_feed_text(feed_url: str, timeout: float = 14.0) -> str:
     """Descarga una fuente de seguridad usando Tor SOCKS5h si está activo (cero fuga de IP)."""
-    if _is_tor_socks_ready():
-        try:
-            return fetch_text_via_socks5(feed_url, socks_port=SOCKS_PORT, timeout=timeout)
-        except Exception:
-            pass
-    req = Request(feed_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(req, timeout=timeout) as resp:
-        return resp.read().decode("utf-8", errors="ignore")
+    return fetch_text_via_socks5(feed_url, socks_port=SOCKS_PORT, timeout=timeout)
 
 
 def apply_verified_threat_domains(domains: set[str], target_dir: Path) -> tuple[bool, int, str]:
@@ -325,7 +318,7 @@ def check_app_update(proj_dir: Path | None = None, manifest_url: str = "") -> di
     if not target_url:
         if (root / ".git").is_dir():
             try:
-                subprocess.run(["git", "-C", str(root), "fetch", "--quiet"], timeout=8, check=False)
+                subprocess.run(["git", "-c", f"http.proxy=socks5h://{SOCKS_HOST}:{SOCKS_PORT}", "-C", str(root), "fetch", "--quiet"], timeout=8, check=False)
                 res = subprocess.run(
                     ["git", "-C", str(root), "rev-list", "--count", "HEAD..@{u}"],
                     capture_output=True,
@@ -358,7 +351,7 @@ def check_app_update(proj_dir: Path | None = None, manifest_url: str = "") -> di
         has_upd = parse_semver(remote_ver) > parse_semver(local_ver)
         notes = str(remote.get("notes") or "")
         if not has_upd and (root / ".git").is_dir():
-            subprocess.run(["git", "-C", str(root), "fetch", "--quiet"], timeout=8, check=False)
+            subprocess.run(["git", "-c", f"http.proxy=socks5h://{SOCKS_HOST}:{SOCKS_PORT}", "-C", str(root), "fetch", "--quiet"], timeout=8, check=False)
             res = subprocess.run(
                 ["git", "-C", str(root), "rev-list", "--count", "HEAD..@{u}"],
                 capture_output=True,
@@ -387,6 +380,9 @@ def check_app_update(proj_dir: Path | None = None, manifest_url: str = "") -> di
 def apply_app_update(proj_dir: Path | None = None, archive_url: str = "") -> tuple[bool, str]:
     """Aplica la actualización de Netlis conservando intactos los datos y ajustes de data/."""
     root = proj_dir or Path(__file__).resolve().parent
+    privacy = safe_load_json(root / "data" / "privacidad.json", {})
+    if privacy.get("proxy_enabled", True):
+        return False, "Actualización bloqueada en modo Tor: esta ruta usa Git/ZIP y pip directos. Usa explícitamente modo Turbo para actualizar."
     local = get_local_version_info(root)
     repo = str(local.get("repo") or "").strip().strip("/")
     branch = str(local.get("branch") or "main").strip() or "main"
@@ -493,8 +489,7 @@ def update_browser_engine(data_dir: Path | None = None) -> tuple[bool, str]:
         return False, f"No se encontró {pip_bin}."
 
     cmd = [str(pip_bin), "install", "--upgrade", "--quiet", "PyQt6", "PyQt6-WebEngine"]
-    if _is_tor_socks_ready():
-        cmd.extend(["--proxy", f"socks5h://{SOCKS_HOST}:{SOCKS_PORT}"])
+    cmd.extend(["--proxy", f"socks5h://{SOCKS_HOST}:{SOCKS_PORT}"])
 
     try:
         res = subprocess.run(
