@@ -79,7 +79,7 @@ class LeakFixTests(unittest.TestCase):
     def test_restart_entrypoint_removes_previous_mode_flags(self):
         import ast
         import browser
-        source = ast.parse(Path(browser.__file__).read_text())
+        source = ast.parse(Path(browser.__file__).read_text(encoding="utf-8"))
         entry = source.body[-1]
         for frozen in (False, True):
             process = SimpleNamespace(executable='/python', argv=['browser.py', '--no-tor', '--incognito'], frozen=frozen)

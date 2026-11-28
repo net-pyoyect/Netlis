@@ -10,6 +10,7 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    timeout-minutes: 25
     permissions:
       contents: write
 
@@ -27,6 +28,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller pillow
 
+      - name: Run security and Windows integration unit tests
+        env:
+          NETLIS_SKIP_WEBENGINE: "1"
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: "1"
+        run: python -m unittest discover -s tests -v
+
+      - name: Probe real Chromium networking and Tor transition
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          foreach ($mode in @('direct', 'tor', 'switch')) {
+            python tests/windows_runtime_probe.py $mode
+            if ($LASTEXITCODE -ne 0) { throw "Chromium probe failed: $mode" }
+          }
+
+      - name: Smoke test source startup
+        run: |
+          python browser.py --smoke --no-tor
+          if ($LASTEXITCODE -ne 0) { throw "Source startup failed" }
+
       - name: Generate Windows .ico from Netlis logo
         run: |
           python -c "from PIL import Image; img = Image.open('assets/netlis_logo_transparent.png').convert('RGBA'); img.save('assets/netlis.ico', sizes=[(256,256),(128,128),(64,64),(48,48),(32,32),(16,16)])"
@@ -40,6 +62,15 @@ jobs:
             --collect-all PyQt6.QtWebEngineWidgets `
             --collect-all PyQt6.QtWebEngineCore `
             browser.py
+
+      - name: Smoke test packaged executable
+        run: |
+          $process = Start-Process -FilePath "dist\Netlis\Netlis.exe" -ArgumentList "--smoke", "--no-tor" -PassThru
+          if (-not $process.WaitForExit(120000)) {
+            Stop-Process -Id $process.Id -Force
+            throw "Packaged startup timed out"
+          }
+          if ($process.ExitCode -ne 0) { throw "Packaged startup failed: $($process.ExitCode)" }
 
       - name: Package Netlis-Windows.zip
         run: |

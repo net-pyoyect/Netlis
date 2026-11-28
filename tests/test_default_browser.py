@@ -7,6 +7,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import default_browser as db
 
+@unittest.skipUnless(sys.platform.startswith("linux"), "Linux desktop integration")
 class DefaultBrowserTests(unittest.TestCase):
     def test_register_in_user_data_and_quote_spaces(self):
         with tempfile.TemporaryDirectory() as tmp:
